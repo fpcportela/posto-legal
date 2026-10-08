@@ -190,9 +190,10 @@ nav.tabs button[aria-selected="true"]{color:var(--brand);border-top-color:var(--
     </form>
     <form class="card" id="esqForm" hidden novalidate>
       <h2>Recuperar senha</h2>
-      <p class="note">Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.</p>
+      <p class="note" id="eqIntro">Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.</p>
       <label>CPF ou e-mail<input id="eq-id" autocomplete="username"></label>
       <div class="note" id="eqErr" style="color:var(--bad)"></div>
+      <div class="note" id="eqOk" style="color:var(--good)"></div>
       <div class="row"><button class="btn" type="submit">Enviar código</button><button class="btn ghost" type="button" id="eqVoltar">Voltar</button></div>
     </form>
     <form class="card" id="senhaForm" hidden novalidate>
@@ -217,7 +218,7 @@ nav.tabs button[aria-selected="true"]{color:var(--brand);border-top-color:var(--
         <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
         <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
       </div>
-      <label class="check"><input type="checkbox" id="cd-lgpd">Concordo com o uso dos meus dados para criar a conta, conforme a LGPD. CPF, e-mail e WhatsApp não aparecem para outros motoristas.</label>
+      <label class="check"><input type="checkbox" id="cd-lgpd">Concordo com o uso dos meus dados para criar a conta e com o registro do meu uso do app (telas, abastecimentos e avaliações) para análise e melhoria do serviço, conforme a LGPD. CPF, e-mail e WhatsApp não aparecem para outros motoristas.</label>
       <div class="note" id="cadErr" style="color:var(--bad)"></div>
       <div class="row"><button class="btn" type="submit">Continuar</button><button class="btn ghost" type="button" id="cadCancel" hidden>Cancelar</button><button class="btn ghost" type="button" id="cadEntrar" hidden>Já tenho conta</button></div>
     </form>
@@ -353,6 +354,7 @@ nav.tabs button[aria-selected="true"]{color:var(--brand);border-top-color:var(--
     <h2>Minha conta</h2>
     <div class="card" id="contaCard"></div>
     <div class="kpis" id="contaKpis"></div>
+    <div class="card" id="usoCard" hidden><div class="row between"><h3>Uso do app</h3><button class="btn ghost small" type="button" id="usoAtual">Atualizar</button></div><div id="usoBody" style="display:grid;gap:10px"><p class="note">Carregando…</p></div></div>
     <form class="card" id="trocaSenha" novalidate>
       <h3 id="tsTit">Alterar senha</h3>
       <label id="tsAtualL">Senha atual<input id="ts-atual" type="password" autocomplete="current-password"></label>
@@ -413,6 +415,8 @@ nav.tabs button[aria-selected="true"]{color:var(--brand);border-top-color:var(--
 <div class="toast" id="toast" hidden></div>
 
 <script>
+// Banco online (Supabase). Com os dois vazios, o app roda no modo local (dados só neste aparelho).
+const SUPABASE_URL="",SUPABASE_KEY="";
 const COMBS=["Gasolina comum","Gasolina aditivada","Gasolina premium","Etanol","Diesel S10","Diesel S500","GNV"];
 const RATE_TXT=["","Não gostei","Ruim","Regular","Bom","Gostei muito"];
 const CFG_PADRAO={baixo:2.5,alto:4.2,min:2};
@@ -531,17 +535,105 @@ function lsSave(){
   lsSet(LS,{postos:S.postos,pub:S.pub,pubNome:S.pubNome});
   if(S.uid&&S.conta){CONTAS[S.uid]=S.conta;lsSet(LS_CONTAS,CONTAS);lsSet(lsU(S.uid),{mine:S.mine,gar:S.gar})}
 }
+/* ---------- banco online (Supabase) ---------- */
+let sb=null;
+const SESSAO=Math.random().toString(36).slice(2,10),LS_2FA=LS+"-2fa",LS_COD=LS+"-cod-";
+const comLogin=()=>S.mode==="local"||S.mode==="supa";
+const nOuNulo=v=>v==null||v===""?null:Number(v);
+// registro de uso: só no banco online; nunca atrapalha o app se falhar
+function track(tipo,dados){
+  if(!sb)return;
+  try{sb.from("eventos").insert({user_id:S.uid||null,sessao:SESSAO,tipo,dados:dados||null,tela:S.tela||null,agente:navigator.userAgent.slice(0,180)}).then(()=>{},()=>{})}catch(e){}
+}
+function carregarScript(src){return new Promise((ok,falha)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>falha(new Error("script"));document.head.appendChild(s)})}
+const perfilDe=r=>({nome:r.nome,cpf:r.cpf,email:r.email,whats:r.whats,status:r.status,lgpdEm:r.lgpd_em,criadoEm:r.criado_em,atualizadoEm:r.atualizado_em,confirmadoEm:r.confirmado_em,isAdmin:r.is_admin});
+const perfilLinha=c=>({id:S.uid,nome:c.nome,cpf:c.cpf,email:c.email,whats:c.whats,status:c.status,lgpd_em:c.lgpdEm||null,criado_em:c.criadoEm||undefined,confirmado_em:c.confirmadoEm||null});
+const abDe=r=>{const a={id:r.id,veiculoId:r.veiculo_id,postoId:r.posto_id,postoNome:r.posto_nome,km:Number(r.km),comb:r.comb,preco:nOuNulo(r.preco),total:nOuNulo(r.total),litros:nOuNulo(r.litros),cheio:!!r.cheio,data:r.data};
+  if(r.media!=null)a.media=Number(r.media);if(r.estrelas!=null)a.estrelas=r.estrelas;if(r.obs)a.obs=r.obs;if(r.km_l!=null)a.kmL=Number(r.km_l);if(r.avaliado_em)a.avaliadoEm=r.avaliado_em;return a};
+const abLinha=a=>({id:a.id,user_id:S.uid,veiculo_id:a.veiculoId,veiculo_modelo:((S.gar.veiculos||[]).find(v=>v.id===a.veiculoId)||{}).modelo||null,posto_id:a.postoId,posto_nome:a.postoNome,km:a.km,comb:a.comb,preco:a.preco,total:a.total,litros:a.litros,cheio:!!a.cheio,
+  media:a.media??null,estrelas:a.estrelas||null,obs:a.obs||null,km_l:a.kmL??null,avaliado_em:a.avaliadoEm||null,data:a.data});
+async function carregarPerfil(uid){const {data,error}=await sb.from("profiles").select("*").eq("id",uid).maybeSingle();if(error)throw error;return data?perfilDe(data):null}
+async function carregarRede(){
+  const [p,a]=await Promise.all([sb.from("postos").select("*"),sb.from("avaliacoes").select("*").order("data").limit(10000)]);
+  if(p.error)throw p.error;if(a.error)throw a.error;
+  S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
+  S.pub={};S.pubNome={};
+  for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas||undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
+}
+async function carregarMeus(){
+  const [g,ab]=await Promise.all([sb.from("garagem").select("dados").eq("user_id",S.uid).maybeSingle(),sb.from("abastecimentos").select("*").eq("user_id",S.uid)]);
+  if(g.error)throw g.error;if(ab.error)throw ab.error;
+  const d=g.data&&g.data.dados;S.gar=d&&d.veiculos?{...garPadrao(),...d}:garPadrao();S.mine=ab.data.map(abDe);
+}
+async function entrarSupa(uid){
+  S.uid=uid;const f=lsGet(LS_2FA,null);
+  if(f&&f.uid===uid){S.fluxo=f;S.conta=null;return} // falta o código do WhatsApp deste login
+  let c=await carregarPerfil(uid);
+  if(c&&c.status!=="confirmado"){const k=lsGet(LS_COD+uid,null)||{codigo:novoCodigo(),tentativas:0};c={...c,...k};lsSet(LS_COD+uid,k)}
+  S.conta=c;S.isOwner=!!(c&&c.isAdmin);
+  if(contaConfirmada()){await Promise.all([carregarRede(),carregarMeus()]);if(S.isOwner)carregarAdmin()}
+}
+function atualizarRede(){if(sb&&contaConfirmada())carregarRede().then(renderAll).catch(()=>{})}
+async function initSupa(){
+  S.mode="supa";S.contaOk=false;S.uid=null;S.conta=null;gate();$("#status").textContent="Conectando…";
+  await carregarScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js");
+  sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  sb.auth.onAuthStateChange((ev,sess)=>{if(ev==="PASSWORD_RECOVERY"&&sess){S.uid=sess.user.id;S.conta=null;S.fluxo={tipo:"recuperar",etapa:"senha",uid:sess.user.id};S.contaOk=true;gate()}});
+  const {data:{session},error}=await sb.auth.getSession();if(error)throw error;
+  if(session&&!(S.fluxo&&S.fluxo.tipo==="recuperar"))await entrarSupa(session.user.id);
+  S.auth="login";S.contaOk=true;$("#status").innerHTML="Online";renderAll();gate();
+  track("app_aberto",{instalado:matchMedia("(display-mode: standalone)").matches,largura:innerWidth});
+  setInterval(()=>{if(!document.hidden)atualizarRede()},6e4);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)atualizarRede()});
+}
+/* painel do dono: usuários e uso */
+async function carregarAdmin(){
+  if(!sb||!S.isOwner)return;
+  const {data}=await sb.from("profiles").select("*").order("criado_em",{ascending:false});
+  S.usuarios=(data||[]).map(r=>({id:r.id,...perfilDe(r)}));renderAdmin();renderUso(true);
+}
+const ROT_EV={app_aberto:"Abriu o app",tela:"Abriu uma tela",cadastro_enviado:"Enviou cadastro",conta_confirmada:"Confirmou a conta",login:"Entrou",logout:"Saiu",
+  posto_cadastrado:"Cadastrou posto",abastecimento_salvo:"Registrou abastecimento",mapa_posto_aberto:"Abriu posto no mapa",gps_aviso:"Ligou/desligou GPS",
+  gps_pergunta:"Recebeu “Vai abastecer?”",gps_resposta:"Respondeu “Vai abastecer?”",endereco_escolhido:"Usou busca de endereço",senha_link_pedido:"Pediu nova senha",senha_recuperada:"Criou nova senha",senha_alterada:"Alterou a senha"};
+async function renderUso(forcar){
+  if(!sb||!S.isOwner){$("#usoCard").hidden=true;return}
+  $("#usoCard").hidden=false;
+  if(!forcar&&Date.now()-(renderUso.t||0)<3e4)return;renderUso.t=Date.now();
+  const cnt=async(t,f)=>{let q=sb.from(t).select("*",{count:"exact",head:true});if(f)q=f(q);const {count}=await q;return count??0};
+  const desde=new Date(Date.now()-7*864e5).toISOString();
+  try{
+    const [usu,conf,abs,avs,pos,ev7,ult]=await Promise.all([cnt("profiles"),cnt("profiles",q=>q.eq("status","confirmado")),cnt("abastecimentos"),cnt("avaliacoes",q=>q.not("estrelas","is",null)),cnt("postos"),
+      sb.from("eventos").select("tipo,user_id,sessao").gte("criado_em",desde).limit(10000),
+      sb.from("eventos").select("tipo,user_id,dados,criado_em").order("criado_em",{ascending:false}).limit(15)]);
+    const ev=ev7.data||[],porTipo={};ev.forEach(e=>porTipo[e.tipo]=(porTipo[e.tipo]||0)+1);
+    const ativos=new Set(ev.filter(e=>e.user_id).map(e=>e.user_id)).size,nomes=Object.fromEntries(S.usuarios.map(u=>[u.id,u.nome]));
+    const m=(k,v)=>`<div class="metric"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    $("#usoBody").innerHTML=`<div class="kpis">${m("Usuários",usu)}${m("Confirmados",conf)}${m("Ativos 7 dias",ativos)}${m("Abastecimentos",abs)}${m("Avaliações",avs)}${m("Postos",pos)}</div>
+      <h3>Últimos 7 dias</h3>
+      <div style="overflow-x:auto"><table class="utable" style="min-width:0"><tbody>${Object.entries(porTipo).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`<tr><td>${esc(ROT_EV[t]||t)}</td><td style="text-align:right">${n}</td></tr>`).join("")||'<tr><td class="note">Nenhum evento ainda.</td></tr>'}</tbody></table></div>
+      <h3>Atividade recente</h3>
+      <div style="overflow-x:auto"><table class="utable"><tbody>${(ult.data||[]).map(e=>`<tr><td>${new Date(e.criado_em).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</td><td>${esc(e.user_id?(nomes[e.user_id]||"Usuário"):"Visitante")}</td><td>${esc(ROT_EV[e.tipo]||e.tipo)}${e.tipo==="tela"&&e.dados?" · "+esc(e.dados.v):""}</td></tr>`).join("")}</tbody></table></div>
+      <p class="note">Os dados completos ficam no painel do Supabase (Table Editor), com exportação para CSV.</p>`;
+  }catch(e){$("#usoBody").innerHTML='<p class="note">Não foi possível carregar os números agora.</p>'}
+}
 async function addPosto(p){
+  if(sb){const {data,error}=await sb.from("postos").insert({nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat??null,lng:p.lng??null}).select("id").single();if(error)throw error;S.postos[data.id]={...p,criadoPor:S.uid};return data.id}
   if(db){const ref=await db.collection("postos").add(p);S.postos[ref.id]=p;return ref.id}
   const id="p"+Date.now();S.postos[id]=p;lsSave();return id;
 }
-async function saveGar(){if(db)await db.doc(`data/users/${S.uid}/garagem`).set(S.gar);else lsSave()}
-async function saveAbast(a){if(db)await db.doc(`data/users/${S.uid}/${a.id}`).set(a);else{S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);lsSave()}}
-async function savePub(items){const nome=primeiroNome();if(db)await db.doc("avaliacoes/"+S.uid).set({itens:items,nome});else{S.pub[S.uid]=items;S.pubNome[S.uid]=nome;lsSave()}}
-async function saveConta(c){if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
+async function saveGar(){if(sb){const {error}=await sb.from("garagem").upsert({user_id:S.uid,dados:S.gar,atualizado_em:new Date().toISOString()});if(error)throw error;return}if(db)await db.doc(`data/users/${S.uid}/garagem`).set(S.gar);else lsSave()}
+async function saveAbast(a){if(sb){const {error}=await sb.from("abastecimentos").upsert(abLinha(a));if(error)throw error;S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);return}if(db)await db.doc(`data/users/${S.uid}/${a.id}`).set(a);else{S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);lsSave()}}
+async function savePub(items,ids){const nome=primeiroNome();
+  if(sb){const rows=items.filter(i=>!ids||ids.includes(i.id)).map(i=>({id:i.id,user_id:S.uid,nome,posto_id:i.postoId,comb:i.comb,preco:i.preco??null,modelo:i.modelo||null,km_l:i.kmL??null,estrelas:i.estrelas||null,obs:i.obs||null,avaliado_em:i.avaliadoEm||null,data:i.data}));
+    const {error}=await sb.from("avaliacoes").upsert(rows);if(error)throw error;S.pub[S.uid]=items;S.pubNome[S.uid]=nome;return}
+  if(db)await db.doc("avaliacoes/"+S.uid).set({itens:items,nome});else{S.pub[S.uid]=items;S.pubNome[S.uid]=nome;lsSave()}}
+async function saveConta(c){if(sb){const {error}=await sb.from("profiles").upsert(perfilLinha(c));if(error)throw error;S.conta={...c,isAdmin:(S.conta||{}).isAdmin};lsSet(LS_COD+S.uid,c.codigo?{codigo:c.codigo,tentativas:c.tentativas||0}:null);return}if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
 const primeiroNome=()=>((S.conta&&S.conta.nome)||"").trim().split(/\s+/)[0]||"";
 
 async function init(){
+  if(SUPABASE_URL&&SUPABASE_KEY){
+    try{await initSupa()}catch(e){console.error(e);$("#status").textContent="Sem conexão";$("#cadLoading").innerHTML='<p class="note">Não foi possível conectar ao servidor. Verifique a internet.</p><div><button class="btn" type="button" onclick="location.reload()">Tentar de novo</button></div>'}
+    return}
   lsLoad();renderAll();gate();
   const c=window.claude;
   [db,user,sample]=c&&c.use?await Promise.all(["db","user","sample"].map(n=>c.use(n).catch(()=>null))):[null,null,null];
@@ -713,7 +805,7 @@ function renderMapa(){
     const {st,r,pr}=infoPosto(id);
     if(M.soComb&&!pr)continue;n++;
     const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}"><span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
-    L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:p.nome,zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);abrirPosto(id)}).addTo(mkLayer);
+    L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:p.nome,zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
   }
   $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span>`;
   $("#mapMsg").textContent=`${n} posto(s) no mapa, com preço de ${comb}.`+(semLoc?` ${semLoc} posto(s) sem localização não aparecem.`:"")+" Toque num ponto vazio do mapa para cadastrar um posto ali.";
@@ -802,10 +894,10 @@ function perguntar(id,simulado){
       <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brl(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
       ${destaque.length?`<div class="summary">${destaque.map(([c,t,x])=>`<div class="${c}"><b>${t}</b>${esc(x)}</div>`).join("")}</div>`:""}</div>
     <div class="row"><button class="btn" id="gpsSim">Sim, vou abastecer</button><button class="btn ghost" id="gpsNao">Agora não</button></div>`;
-  $("#gpsAsk").hidden=false;$("#gpsSim").focus();
+  $("#gpsAsk").hidden=false;$("#gpsSim").focus();track("gps_pergunta",{simulado:!!simulado});
   try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}
-  $("#gpsSim").onclick=()=>{$("#gpsAsk").hidden=true;irAbastecer(id)};
-  $("#gpsNao").onclick=()=>{$("#gpsAsk").hidden=true;toast("Ok, não pergunto de novo sobre este posto pelos próximos 30 minutos")};
+  $("#gpsSim").onclick=()=>{track("gps_resposta",{resposta:"sim"});$("#gpsAsk").hidden=true;irAbastecer(id)};
+  $("#gpsNao").onclick=()=>{track("gps_resposta",{resposta:"nao"});$("#gpsAsk").hidden=true;toast("Ok, não pergunto de novo sobre este posto pelos próximos 30 minutos")};
 }
 
 /* ---------- HISTÓRICO ---------- */
@@ -832,7 +924,7 @@ function renderGaragem(){renderConta();renderAdmin();
 function renderAll(){renderPostoList();fillVeicSelect();renderRede();renderMapa();if(M.alvo&&!$("#sheet").hidden&&allPostos()[M.alvo])abrirPosto(M.alvo);renderHist();renderGaragem();if((S.gar.config||{}).gps&&M.watch==null&&!M.gpsErro)startGps(false);if(S.sel)renderAlert();if(S.detail&&!$("#detail").hidden)renderDetail(S.detail);updateCalc()}
 
 /* ---------- eventos ---------- */
-function show(v){if(!contaConfirmada()&&v!=="cadastro"){S.pendTab=v;v="cadastro"}if(v==="conta"){renderConta();$("#contaBtn").setAttribute("aria-current","page")}else $("#contaBtn").removeAttribute("aria-current");document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-"+v);if(v!=="mapa")$("#sheet").hidden=true;else setTimeout(()=>{renderMapa();if(map)map.invalidateSize()},0);try{localStorage.setItem(LS+"-tab",v)}catch(e){}}
+function show(v){if(!contaConfirmada()&&v!=="cadastro"){S.pendTab=v;v="cadastro"}if(S.tela!==v){S.tela=v;track("tela",{v})}if(v==="conta"){renderConta();$("#contaBtn").setAttribute("aria-current","page")}else $("#contaBtn").removeAttribute("aria-current");document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-"+v);if(v!=="mapa")$("#sheet").hidden=true;else setTimeout(()=>{renderMapa();if(map)map.invalidateSize()},0);try{localStorage.setItem(LS+"-tab",v)}catch(e){}}
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
 $("#busca").oninput=renderPostoList;
 $("#postoList").onclick=e=>{const b=e.target.closest(".posto");if(b)selectPosto(b.dataset.id)};
@@ -918,7 +1010,7 @@ $("#npLoc").onclick=()=>{
       const n=norm([p.name,p.brand].join(" ")),band=/ipiranga/.test(n)?"Ipiranga":/shell|raizen/.test(n)?"Shell":/petrobras|vibra|\bbr\b/.test(n)?"Petrobras / BR":/\bale\b/.test(n)?"Ale":"";
       if(band)$("#np-band").value=band;
     }
-    $("#np-lat").value=it.ll[0];$("#np-lng").value=it.ll[1];$("#npLocTxt").textContent="Localização do endereço escolhido.";
+    $("#np-lat").value=it.ll[0];$("#np-lng").value=it.ll[1];$("#npLocTxt").textContent="Localização do endereço escolhido.";track("endereco_escolhido",{posto:p.osm_value==="fuel"});
     fechar();
   }
   inp.addEventListener("input",()=>{clearTimeout(timer);if(inp.value.trim().length<4){seq++;fechar();return}timer=setTimeout(buscar,350)});
@@ -945,7 +1037,7 @@ $("#novoPosto").onsubmit=async e=>{e.preventDefault();const nome=$("#np-nome").v
   const p={nome,bandeira:$("#np-band").value,cidade,uf:$("#np-uf").value,endereco:$("#np-end").value.trim(),criadoPor:S.uid,criadoEm:new Date().toISOString()};
   const lat=parseFloat($("#np-lat").value),lng=parseFloat($("#np-lng").value);if(!isNaN(lat)&&!isNaN(lng)){p.lat=lat;p.lng=lng}
   const origem=$("#novoPosto").dataset.origem;
-  try{const id=await addPosto(p);$("#novoPosto").reset();$("#np-lat").value=$("#np-lng").value="";$("#novoPosto").hidden=true;toast("Posto cadastrado");renderAll();
+  try{const id=await addPosto(p);$("#novoPosto").reset();$("#np-lat").value=$("#np-lng").value="";$("#novoPosto").hidden=true;toast("Posto cadastrado");track("posto_cadastrado",{origem:origem||"abastecer",localizacao:p.lat!=null});renderAll();
     if(origem==="mapa"){show("mapa");setTimeout(()=>abrirPosto(id),0)}else selectPosto(id)}catch(err){toast("Não foi possível cadastrar: "+(err.message||err.code))}};
 $("#trocar").onclick=()=>{S.sel=null;$("#pickCard").hidden=false;$("#arrive").hidden=false;$("#chosenCard").hidden=true;$("#abForm").hidden=true};
 $("#veiculo").onchange=()=>{if($("#veiculo").value==="__novo"){openVInline(true);$("#vi-modelo").focus();return}$("#vInline").hidden=true;delete $("#vInline").dataset.manual;prefillVeic();updateCalc()};
@@ -1006,8 +1098,8 @@ $("#abForm").onsubmit=async e=>{
   }
   items.sort((x,y)=>x.data.localeCompare(y.data));
   $("#saveAb").disabled=true;
-  try{await saveAbast(a);if(prevAb)await saveAbast(prevAb);await savePub(items.slice(-400));
-    toast(c.media?`Salvo! Média de ${num(c.media)} km/l`:"Abastecimento salvo");
+  try{await saveAbast(a);if(prevAb)await saveAbast(prevAb);await savePub(items.slice(-400),[id,c.last&&c.last.id].filter(Boolean));
+    track("abastecimento_salvo",{comb,media:a.media||null,avaliou:!!c.last,estrelas:c.last?S.stars:null,cheio:c.cheio});toast(c.media?`Salvo! Média de ${num(c.media)} km/l`:"Abastecimento salvo");
     $("#abForm").reset();ultimoDigitado=null;$("#cheio").checked=false;S.stars=0;document.querySelectorAll("#rate button").forEach(x=>x.classList.remove("on"));$("#rateLabel").textContent="Toque nas estrelas";
     $("#trocar").click();renderAll();show("historico");
   }catch(err){toast(err.code==="quota_exceeded"?"Armazenamento cheio.":"Não foi possível salvar: "+(err.message||err.code))}
@@ -1020,6 +1112,7 @@ $("#mSoComb").onchange=()=>{M.soComb=$("#mSoComb").checked;renderMapa()};
 $("#mLoc").onclick=()=>startGps(true);
 $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config:{...(S.gar.config||CFG_PADRAO),gps:on}};
   try{await saveGar()}catch(e){}
+  track("gps_aviso",{ligado:on});
   if(on){startGps(false);toast("Aviso por GPS ligado")}else{if(M.watch!=null)navigator.geolocation.clearWatch(M.watch);M.watch=null;toast("Aviso por GPS desligado")}};
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
@@ -1080,7 +1173,7 @@ function showCad(step){ // loading | login | esqueci | senha | form | code
   for(const [k,sel] of Object.entries(ids))$(sel).hidden=k!==step;
 }
 function prepCode(){
-  const f=S.fluxo,local=S.mode==="local";
+  const f=S.fluxo,local=comLogin();
   if(f){
     $("#codeMsg").innerHTML=`Para ${f.tipo==="login"?"entrar":"criar uma nova senha"}, digite o código que enviamos para o WhatsApp <b>${esc(whatsMasc(f.whats))}</b>.`;
     $("#codeDemo").textContent=f.codigo;$("#codeBtn").textContent=f.tipo==="login"?"Entrar":"Continuar";$("#codeFix").hidden=true;
@@ -1099,19 +1192,27 @@ function gate(){
     if(!S.contaOk){showCad("loading");return}
     if(S.fluxo){if(S.fluxo.etapa==="senha")showCad("senha");else{prepCode();showCad("code")}return}
     if(S.conta&&S.conta.status==="pendente"){prepCode();showCad("code");return}
-    if(S.mode==="local"&&S.auth!=="cadastro"){showCad(S.auth==="esqueci"?"esqueci":"login");return}
-    $("#cadTit").textContent="Crie sua conta";$("#cadCancel").hidden=true;
-    $("#cadSenhas").hidden=$("#cadEntrar").hidden=S.mode!=="local";showCad("form");
+    const completar=!!(sb&&S.uid&&!S.conta);
+    if(comLogin()&&S.auth!=="cadastro"&&!completar){
+      if(S.auth==="esqueci")$("#eqIntro").textContent=sb?"Informe seu CPF ou e-mail. Vamos enviar um link para o e-mail da conta para você criar uma nova senha.":"Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.";
+      showCad(S.auth==="esqueci"?"esqueci":"login");return}
+    $("#cadTit").textContent=completar?"Complete seu cadastro":"Crie sua conta";$("#cadCancel").hidden=true;
+    $("#cadSenhas").hidden=!comLogin()||completar;$("#cadEntrar").hidden=!comLogin()||completar;showCad("form");
   }else if(!$("#v-cadastro").hidden){show(S.pendTab||"abastecer")}
 }
 function irPara(auth){S.auth=auth;S.fluxo=null;["#lgErr","#eqErr","#nsErr","#cadErr","#codeErr"].forEach(x=>$(x).textContent="");gate()}
-function sairLocal(msg){
-  S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="abastecer";entrarLocal(null);
+async function sair(msg){
+  if(sb){track("logout");try{await sb.auth.signOut()}catch(e){}}
+  lsSet(LS_2FA,null);
+  S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="abastecer";S.isOwner=false;S.usuarios=[];
+  if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.pubNome={}}else entrarLocal(null);
   fillCadForm({});["#lg-senha","#cd-senha","#cd-senha2","#cd-code"].forEach(x=>$(x).value="");
   if(msg)toast(msg);S.auth="login";renderAll();gate();
 }
+const sairLocal=sair;
 function editarConta(fromGaragem){
   S.editando=true;fillCadForm(S.conta||{});$("#cadErr").textContent="";
+  $("#cd-email").readOnly=!!sb; // no banco online o e-mail é o login; troca de e-mail fica para depois
   $("#cadTit").textContent=fromGaragem?"Alterar dados":"Corrija seus dados";$("#cadCancel").hidden=false;
   $("#cadSenhas").hidden=$("#cadEntrar").hidden=true;showCad("form");
 }
@@ -1120,14 +1221,30 @@ $("#cd-cpf").oninput=e=>e.target.value=fmtCpf(e.target.value);
 $("#cd-whats").oninput=e=>e.target.value=fmtWhats(e.target.value);
 $("#cd-code").oninput=e=>e.target.value=soDig(e.target.value).slice(0,6);
 $("#lg-id").oninput=$("#eq-id").oninput=e=>{const v=e.target.value;if(/^[\d.\-]+$/.test(v))e.target.value=fmtCpf(v)};
-$("#lgCriar").onclick=()=>{fillCadForm({});$("#cd-senha").value=$("#cd-senha2").value="";irPara("cadastro")};
+$("#lgCriar").onclick=()=>{fillCadForm({});$("#cd-email").readOnly=false;$("#cd-senha").value=$("#cd-senha2").value="";irPara("cadastro")};
 $("#cadEntrar").onclick=()=>irPara("login");
-$("#lgEsqueci").onclick=()=>{$("#eq-id").value=$("#lg-id").value;irPara("esqueci")};
+$("#lgEsqueci").onclick=()=>{$("#eq-id").value=$("#lg-id").value;$("#eqOk").textContent="";irPara("esqueci")};
 $("#eqVoltar").onclick=()=>irPara("login");
-$("#codeVoltar").onclick=()=>{if(S.fluxo)irPara("login");else sairLocal()};
-$("#loginForm").onsubmit=e=>{
+$("#codeVoltar").onclick=()=>{if(S.fluxo&&!sb)irPara("login");else sair()};
+const emailMasc=e=>{const [u,d]=String(e||"").split("@");return d?u.slice(0,2)+"***@"+d:e};
+async function emailDoLogin(idv){const {data,error}=await sb.rpc("email_do_login",{ident:idv});if(error)throw error;return data}
+$("#loginForm").onsubmit=async e=>{
   e.preventDefault();const idv=$("#lg-id").value.trim(),senha=$("#lg-senha").value,err=$("#lgErr");
   if(!idv||!senha){err.textContent="Informe o CPF ou e-mail e a senha.";return}
+  if(sb){
+    err.textContent="Entrando…";
+    try{
+      const email=await emailDoLogin(idv);
+      if(!email){err.textContent="Não encontramos conta com este CPF ou e-mail.";return}
+      const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
+      if(error){err.textContent=/invalid/i.test(error.message)?"Senha incorreta.":/rate|many|seconds/i.test(error.message)?"Muitas tentativas. Aguarde alguns minutos e tente de novo.":"Não foi possível entrar: "+error.message;return}
+      const uid=data.user.id,c=await carregarPerfil(uid);
+      err.textContent="";$("#lg-senha").value="";
+      if(!c||c.status!=="confirmado"){await entrarSupa(uid);renderAll();gate();return}
+      S.uid=uid;S.conta=null;S.fluxo={tipo:"login",uid,whats:c.whats,codigo:novoCodigo(),tentativas:0};lsSet(LS_2FA,S.fluxo);
+      $("#cd-code").value="";$("#codeErr").textContent="";toast("Código enviado para o WhatsApp");gate();
+    }catch(x){err.textContent="Sem conexão com o servidor. Tente de novo."}
+    return}
   const uid=acharConta(idv);if(!uid){err.textContent="Não encontramos conta com este CPF ou e-mail.";return}
   const c=CONTAS[uid],agora=Date.now();
   if(c.bloqueadoAte>agora){err.textContent=`Muitas tentativas erradas. Tente de novo em ${Math.ceil((c.bloqueadoAte-agora)/6e4)} min ou use “Esqueci minha senha”.`;return}
@@ -1142,16 +1259,33 @@ $("#loginForm").onsubmit=e=>{
   S.fluxo={tipo:"login",uid,whats:c.whats,codigo:novoCodigo(),tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
   toast("Código enviado para o WhatsApp");gate();
 };
-$("#esqForm").onsubmit=e=>{
-  e.preventDefault();const uid=acharConta($("#eq-id").value);
+$("#esqForm").onsubmit=async e=>{
+  e.preventDefault();const idv=$("#eq-id").value.trim();$("#eqOk").textContent="";
+  if(sb){
+    $("#eqErr").textContent="Enviando…";
+    try{
+      const email=await emailDoLogin(idv);
+      if(!email){$("#eqErr").textContent="Não encontramos conta com este CPF ou e-mail.";return}
+      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+      if(error){$("#eqErr").textContent=/rate|seconds/i.test(error.message)?"Aguarde um pouco antes de pedir outro link.":"Não foi possível enviar: "+error.message;return}
+      $("#eqErr").textContent="";$("#eqOk").textContent=`Enviamos um link para ${emailMasc(email)}. Abra o e-mail neste aparelho e toque no link para criar a nova senha.`;track("senha_link_pedido");
+    }catch(x){$("#eqErr").textContent="Sem conexão com o servidor. Tente de novo."}
+    return}
+  const uid=acharConta(idv);
   if(!uid){$("#eqErr").textContent="Não encontramos conta com este CPF ou e-mail.";return}
   $("#eqErr").textContent="";S.fluxo={tipo:"recuperar",uid,whats:CONTAS[uid].whats,codigo:novoCodigo(),tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
   toast("Código enviado para o WhatsApp");gate();
 };
-$("#senhaForm").onsubmit=e=>{
+$("#senhaForm").onsubmit=async e=>{
   e.preventDefault();const a=$("#ns-senha").value,b=$("#ns-senha2").value,erro=senhaErro(a,b);
   $("#nsErr").textContent=erro;if(erro)return;
-  const uid=S.fluxo.uid,c=CONTAS[uid];
+  const uid=S.fluxo.uid;
+  if(sb){
+    const {error}=await sb.auth.updateUser({password:a});
+    if(error){$("#nsErr").textContent=/same|different/i.test(error.message)?"A nova senha precisa ser diferente da anterior.":"Não foi possível salvar: "+error.message;return}
+    S.fluxo=null;$("#ns-senha").value=$("#ns-senha2").value="";history.replaceState(null,"",location.pathname);
+    await entrarSupa(uid);renderAll();track("senha_recuperada");toast(`Senha criada. Bem-vindo, ${primeiroNome()}!`);gate();return}
+  const c=CONTAS[uid];
   c.senha=novaSenha(a);c.erros=0;delete c.bloqueadoAte;
   // o código no WhatsApp comprovou o número: uma conta pendente fica confirmada
   if(c.status!=="confirmado"){c.status="confirmado";c.confirmadoEm=new Date().toISOString();delete c.codigo;delete c.tentativas}
@@ -1161,20 +1295,35 @@ $("#senhaForm").onsubmit=e=>{
 $("#cadForm").onsubmit=async e=>{
   e.preventDefault();
   const nome=$("#cd-nome").value.trim().replace(/\s+/g," "),cpf=soDig($("#cd-cpf").value),email=$("#cd-email").value.trim().toLowerCase(),whats=soDig($("#cd-whats").value);
-  const nova=S.mode==="local"&&!S.editando,outro=id=>id&&id!==S.uid;
+  const nova=comLogin()&&!S.editando,completar=!!(sb&&S.uid&&!S.conta),outro=id=>id&&id!==S.uid;
   let erro=nome.split(" ").length<2?"Informe nome e sobrenome.":!cpfOk(cpf)?"CPF inválido. Confira os números.":!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)?"E-mail inválido.":
     !(whats.length===11&&whats[2]==="9")?"WhatsApp inválido. Use DDD + celular, ex.: (11) 98765-4321.":"";
   if(!erro&&S.mode==="local"&&outro(acharConta(cpf)))erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
   if(!erro&&S.mode==="local"&&outro(acharConta(email)))erro="Já existe uma conta com este e-mail.";
-  if(!erro&&nova)erro=senhaErro($("#cd-senha").value,$("#cd-senha2").value);
+  if(!erro&&nova&&!completar)erro=senhaErro($("#cd-senha").value,$("#cd-senha2").value);
   if(!erro&&!$("#cd-lgpd").checked)erro="Marque a concordância com o uso dos dados.";
+  if(!erro&&sb){
+    $("#cadErr").textContent="Verificando…";
+    try{const {data}=await sb.rpc("cadastro_em_uso",{p_cpf:cpf,p_email:email});
+      if(data==="cpf")erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
+      else if(data==="email")erro="Já existe uma conta com este e-mail.";
+    }catch(x){erro="Sem conexão com o servidor. Tente de novo."}
+  }
   $("#cadErr").textContent=erro;if(erro)return;
-  if(nova){S.uid="u"+Date.now();S.conta=null;S.mine=[];S.gar=garPadrao()}
+  if(nova&&sb&&!S.uid){
+    $("#cadErr").textContent="Criando conta…";
+    const {data,error}=await sb.auth.signUp({email,password:$("#cd-senha").value});
+    if(error){$("#cadErr").textContent=/registered|exists/i.test(error.message)?"Este e-mail já tem conta. Entre com sua senha.":/rate|seconds/i.test(error.message)?"Muitas tentativas. Aguarde um pouco e tente de novo.":"Não foi possível criar a conta: "+error.message;return}
+    if(!data.session){$("#cadErr").textContent="Enviamos um e-mail de confirmação. Toque no link do e-mail e depois entre com sua senha.";return}
+    S.uid=data.user.id;$("#cadErr").textContent="";
+  }
+  if(nova&&!sb){S.uid="u"+Date.now();S.conta=null;S.mine=[];S.gar=garPadrao()}
   const antes=S.conta||{},now=new Date().toISOString(),precisaConfirmar=antes.whats!==whats||antes.status!=="confirmado";
   const c={...antes,nome,cpf,email,whats,lgpdEm:antes.lgpdEm||now,atualizadoEm:now,criadoEm:antes.criadoEm||now};
-  if(nova)c.senha=novaSenha($("#cd-senha").value);
+  if(nova&&!sb)c.senha=novaSenha($("#cd-senha").value);
   if(precisaConfirmar){c.status="pendente";c.codigo=novoCodigo();c.tentativas=0;c.codigoEm=now;delete c.confirmadoEm}
-  try{await saveConta(c);if(nova)lsSet(LS_SESSAO,S.uid);S.editando=false;$("#cd-code").value="";$("#codeErr").textContent="";$("#cd-senha").value=$("#cd-senha2").value="";
+  try{await saveConta(c);if(nova&&!sb)lsSet(LS_SESSAO,S.uid);if(nova)track("cadastro_enviado");
+    S.editando=false;$("#cd-code").value="";$("#codeErr").textContent="";$("#cd-senha").value=$("#cd-senha2").value="";
     if(precisaConfirmar){toast("Código enviado para o WhatsApp");gate()}else{toast("Dados atualizados");show("conta");renderGaragem()}}
   catch(err){$("#cadErr").textContent="Não foi possível salvar: "+(err.message||err.code)}
 };
@@ -1186,9 +1335,12 @@ $("#cadCode").onsubmit=async e=>{
       f.tentativas++;
       if(f.tentativas>=5){f.codigo=novoCodigo();f.tentativas=0;$("#codeErr").textContent="Muitas tentativas. Enviamos um novo código."}
       else $("#codeErr").textContent=`Código incorreto. Restam ${5-f.tentativas} tentativas.`;
-      gate();return}
+      if(sb)lsSet(LS_2FA,f);gate();return}
     $("#codeErr").textContent="";$("#cd-code").value="";
-    if(f.tipo==="login"){S.fluxo=null;entrarLocal(f.uid);renderAll();toast(`Bem-vindo de volta, ${primeiroNome()}!`);gate()}
+    if(f.tipo==="login"){
+      S.fluxo=null;lsSet(LS_2FA,null);
+      if(sb){try{await entrarSupa(f.uid)}catch(x){toast("Sem conexão com o servidor");return}}else entrarLocal(f.uid);
+      renderAll();track("login");toast(`Bem-vindo de volta, ${primeiroNome()}!`);gate()}
     else{f.etapa="senha";gate();$("#ns-senha").focus()}
     return}
   const c={...S.conta};
@@ -1201,25 +1353,34 @@ $("#cadCode").onsubmit=async e=>{
   // dados da versão antiga sem login: ficam com a primeira conta criada no aparelho
   const orf=S.mode==="local"?lsGet(LS_ORFAO,null):null;
   if(orf){S.mine=orf.mine||[];if(orf.gar)S.gar=orf.gar;if(orf.pub)S.pub[S.uid]=orf.pub;lsSet(LS_ORFAO,null)}
-  try{await saveConta(c);$("#codeErr").textContent="";$("#cd-code").value="";renderAll();
+  try{await saveConta(c);
+    if(sb){await Promise.all([carregarRede(),carregarMeus()]);S.isOwner=!!S.conta.isAdmin}
+    $("#codeErr").textContent="";$("#cd-code").value="";renderAll();track("conta_confirmada");
     toast(orf?"Conta confirmada. Seus veículos e abastecimentos anteriores agora estão nesta conta.":`Conta confirmada. Bem-vindo, ${primeiroNome()}!`);gate()}
   catch(err){$("#codeErr").textContent="Não foi possível confirmar: "+(err.message||err.code)}
 };
 $("#codeResend").onclick=async()=>{
-  if(S.fluxo){S.fluxo.codigo=novoCodigo();S.fluxo.tentativas=0;$("#codeErr").textContent="";toast("Novo código enviado");gate();return}
+  if(S.fluxo){S.fluxo.codigo=novoCodigo();S.fluxo.tentativas=0;if(sb)lsSet(LS_2FA,S.fluxo);$("#codeErr").textContent="";toast("Novo código enviado");gate();return}
   const c={...S.conta,codigo:novoCodigo(),tentativas:0,codigoEm:new Date().toISOString()};try{await saveConta(c);$("#codeErr").textContent="";toast("Novo código enviado");gate()}catch(err){toast("Não foi possível reenviar")}};
 $("#codeFix").onclick=()=>editarConta(false);
-$("#cadCancel").onclick=()=>{S.editando=false;if(contaConfirmada()){show("conta")}else gate()};
+$("#cadCancel").onclick=()=>{S.editando=false;$("#cd-email").readOnly=false;if(contaConfirmada()){show("conta")}else gate()};
 $("#contaBtn").onclick=()=>show("conta");
-$("#trocaSenha").onsubmit=e=>{
-  e.preventDefault();const c=S.conta,a=$("#ts-nova").value,erro=c.senha&&!senhaConfere(c,$("#ts-atual").value)?"Senha atual incorreta.":senhaErro(a,$("#ts-nova2").value);
+$("#usoAtual").onclick=()=>carregarAdmin();
+$("#trocaSenha").onsubmit=async e=>{
+  e.preventDefault();const c=S.conta,a=$("#ts-nova").value,atual=$("#ts-atual").value;let erro=senhaErro(a,$("#ts-nova2").value);
+  if(sb){
+    if(!erro){const r=await sb.auth.signInWithPassword({email:c.email,password:atual});if(r.error)erro="Senha atual incorreta."}
+    if(!erro){const {error}=await sb.auth.updateUser({password:a});if(error)erro=/same|different/i.test(error.message)?"A nova senha precisa ser diferente da atual.":"Não foi possível salvar: "+error.message}
+    $("#tsErr").textContent=erro;if(erro)return;
+    $("#trocaSenha").reset();toast("Senha alterada");track("senha_alterada");return}
+  if(!erro&&c.senha&&!senhaConfere(c,atual))erro="Senha atual incorreta.";
   $("#tsErr").textContent=erro;if(erro)return;
   S.conta={...c,senha:novaSenha(a)};lsSave();$("#trocaSenha").reset();toast(c.senha?"Senha alterada":"Senha criada");renderConta();
 };
 $("#sairBtn").onclick=async e=>{const b=e.currentTarget;
   if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Confirmar: sair da conta";b.classList.remove("ghost");return}
   delete b.dataset.confirm;b.textContent="Sair da conta";b.classList.add("ghost");
-  sairLocal("Você saiu da conta");};
+  sair("Você saiu da conta");};
 function renderConta(){
   const c=S.conta;if(!c){$("#contaCard").hidden=true;return}
   $("#contaCard").hidden=false;
@@ -1229,8 +1390,9 @@ function renderConta(){
   $("#contaEdit").onclick=()=>editarConta(true);
   const nAval=(S.pub[S.uid]||[]).filter(i=>i.estrelas).length;
   $("#contaKpis").innerHTML=`<div class="metric"><div class="k">Veículos</div><div class="v">${(S.gar.veiculos||[]).length}</div></div><div class="metric"><div class="k">Abastecimentos</div><div class="v">${S.mine.length}</div></div><div class="metric"><div class="k">Avaliações</div><div class="v">${nAval}</div></div>`;
-  $("#sairCard").hidden=$("#trocaSenha").hidden=S.mode!=="local";
-  $("#tsAtualL").hidden=!c.senha;$("#tsTit").textContent=$("#tsBtn").textContent=c.senha?"Alterar senha":"Criar senha";
+  $("#sairCard").hidden=$("#trocaSenha").hidden=!comLogin();
+  const temSenha=!!(sb||c.senha);$("#tsAtualL").hidden=!temSenha;$("#tsTit").textContent=$("#tsBtn").textContent=temSenha?"Alterar senha":"Criar senha";
+  if(S.isOwner&&sb&&S.tela==="conta")renderUso();
 }
 function renderAdmin(){
   $("#adminCard").hidden=!S.isOwner;if(!S.isOwner)return;

@@ -60,3 +60,14 @@ O posto é avaliado (estrelas + comentário) sempre no abastecimento **seguinte*
 - Mapa e lista de postos: Google Places API ou base de revendedores da ANP.
 - Backend: Supabase (Postgres + login + regras de acesso), com o mesmo modelo de dados acima.
 - Notificação ao chegar: nota do posto e resumo de elogios e reclamações.
+
+## Banco online (Supabase)
+
+Com `SUPABASE_URL` e `SUPABASE_KEY` preenchidos no topo do script de `prototipo/index.html`, o app passa a usar o banco online; vazios, roda no modo local.
+
+- Script do banco: `supabase/schema.sql` (tabelas `profiles`, `postos`, `garagem`, `abastecimentos`, `avaliacoes`, `eventos` e a visão `uso_por_dia`, com regras de acesso RLS).
+- Login pelo Supabase Auth (e-mail + senha; o CPF é convertido no e-mail da conta pela função `email_do_login`). Depois da senha continua o código do WhatsApp (ainda simulado).
+- "Esqueci minha senha" no modo online manda um **link por e-mail** (o código do WhatsApp para recuperar senha precisa de servidor próprio).
+- Eventos de uso gravados em `eventos`: abriu o app, telas, cadastro, login/saída, posto cadastrado, abastecimento, mapa, GPS, busca de endereço.
+- Administrador: `update public.profiles set is_admin = true where email = '...';` no SQL Editor. O administrador vê em Minha conta o cartão "Uso do app" e, na Garagem, a tabela de usuários.
+- Configuração do Auth: desligar "Confirm email" (Authentication → Sign In / Providers → Email) e colocar o endereço do app em Authentication → URL Configuration (Site URL e Redirect URLs).
