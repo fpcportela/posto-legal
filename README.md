@@ -14,6 +14,7 @@ O protótipo tem todo o fluxo. O mapa e o GPS funcionam no navegador (melhor abr
 - Veículo e combustível no topo: o combustível começa pelo "combustível usual" do veículo e pode ser trocado. Opção "só postos com preço deste combustível".
 - Cor do marcador segue os limites de "Alertas de reputação" da Garagem: verde (ótimo), amarelo (regular ou poucas avaliações), vermelho (péssimo), cinza (sem nota).
 - Tocar no posto abre um painel com nota, preço do combustível do veículo, rendimento relatado com esse combustível, resumo de elogios e reclamações, e os botões "Abastecer aqui" e "Todas as avaliações".
+- No cadastro de posto, o campo **Endereço** busca enquanto você digita (Photon, base do OpenStreetMap, gratuito e sem chave; prioriza a cidade escolhida e a sua posição). Escolher uma sugestão preenche endereço, cidade, UF e localização; se for um posto (⛽), também nome e bandeira. Para produção com muitos usuários, trocar por Google Places ou um servidor Photon próprio.
 - Tocar num ponto vazio permite cadastrar um posto com aquela localização. O formulário de novo posto também tem "Usar minha localização". Postos sem `lat`/`lng` não aparecem no mapa.
 
 ### Aviso de chegada por GPS

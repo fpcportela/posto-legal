@@ -141,6 +141,8 @@ nav.tabs button[aria-selected="true"]{color:var(--brand);border-top-color:var(--
 .ac-list button:last-child{border-bottom:0}
 .ac-list button[aria-selected="true"],.ac-list button:hover{background:var(--brand-soft)}
 .ac-list .uf{color:var(--muted);font-family:var(--f-mono);font-size:.85rem}
+.ac-list .l2{display:block;font-size:.8rem;color:var(--muted)}
+.ac-list .fonte{padding:6px 12px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--line)}
 .ac-list .vazio{padding:9px 12px;font-size:.85rem;color:var(--muted)}
 /* mapa */
 .maptools{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -245,11 +247,11 @@ nav.tabs button[aria-selected="true"]{color:var(--brand);border-top-color:var(--
         <h3>Novo posto</h3>
         <label>Nome do posto<input id="np-nome" required placeholder="Ex.: Auto Posto São Jorge"></label>
         <label>Bandeira<select id="np-band"><option>Bandeira branca</option><option>Petrobras / BR</option><option>Ipiranga</option><option>Shell</option><option>Ale</option><option>Outra</option></select></label>
+        <div class="ac"><label for="np-end">Endereço</label><input id="np-end" placeholder="Digite rua e número para buscar" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="npEndList"><div class="ac-list" id="npEndList" role="listbox" hidden></div></div>
         <div class="two cityuf">
           <div class="ac"><label for="np-cidade">Cidade</label><input id="np-cidade" placeholder="Digite para buscar" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="npCidList"><div class="ac-list" id="npCidList" role="listbox" hidden></div></div>
           <label>Estado<select id="np-uf"></select></label>
         </div>
-        <label>Endereço ou referência<input id="np-end" placeholder="Av. Brasil, 1200"></label>
         <input type="hidden" id="np-lat"><input type="hidden" id="np-lng">
         <div class="row"><button class="btn ghost small" type="button" id="npLoc">Usar minha localização</button><span class="note" id="npLocTxt">Sem localização, o posto não aparece no mapa.</span></div>
         <div class="row"><button class="btn" type="submit">Salvar posto</button><button class="btn ghost" type="button" id="npCancel">Cancelar</button></div>
@@ -874,6 +876,62 @@ $("#npLoc").onclick=()=>{
   box.addEventListener("pointerdown",e=>e.preventDefault());
   box.addEventListener("click",e=>{const b=e.target.closest("button[data-i]");if(b)escolher(itens[+b.dataset.i])});
   ufSel.addEventListener("change",()=>{const c=norm(inp.value);if(c&&!cidades().some(x=>x.k===c&&x.uf===ufSel.value))inp.value="";});
+})();
+/* busca de endereço (Photon, base do OpenStreetMap): escolher preenche endereço, cidade, UF e localização */
+(()=>{
+  const inp=$("#np-end"),box=$("#npEndList"),UF_NOME=Object.fromEntries(Object.entries(UFS).map(([s,n])=>[norm(n),s]));
+  let itens=[],ativo=-1,timer=null,seq=0;
+  const fechar=()=>{box.hidden=true;inp.setAttribute("aria-expanded","false");ativo=-1};
+  const abrir=()=>{box.hidden=false;inp.setAttribute("aria-expanded","true")};
+  const marcar=i=>{ativo=i;[...box.querySelectorAll("button")].forEach((b,j)=>{b.setAttribute("aria-selected",j===i);if(j===i)b.scrollIntoView({block:"nearest"})})};
+  const cidadeDe=p=>p.city||p.town||p.village||p.municipality||"";
+  function linhas(p){
+    const rua=[p.street,p.housenumber].filter(Boolean).join(", ");
+    const l1=p.name&&p.osm_value!=="house"?(rua?`${p.name} · ${rua}`:p.name):rua||p.name||"";
+    return [l1,[p.district||p.suburb,cidadeDe(p),UF_NOME[norm(p.state)]].filter(Boolean).join(" · ")];
+  }
+  function render(){
+    box.innerHTML=(itens.length?itens.map((it,i)=>{const [a,b]=linhas(it.p);return `<button type="button" role="option" aria-selected="false" data-i="${i}"><span>${it.p.osm_value==="fuel"?"⛽ ":""}${esc(a)}<span class="l2">${esc(b)}</span></span></button>`}).join("")
+      :'<div class="vazio">Nenhum endereço encontrado. Confira o texto ou digite o endereço normalmente.</div>')+'<div class="fonte">Endereços: © OpenStreetMap</div>';
+    abrir();ativo=-1;
+  }
+  async function buscar(){
+    const q=inp.value.trim();if(q.length<4){fechar();return}
+    const meu=++seq,cid=$("#np-cidade").value.trim(),uf=$("#np-uf").value;
+    const ctx=cid&&!norm(q).includes(norm(cid))?`, ${cid}${uf?" "+UFS[uf]:""}`:uf&&!cid?`, ${UFS[uf]}`:"";
+    const pos=M.me||(map?[map.getCenter().lat,map.getCenter().lng]:null);
+    const u=new URL("https://photon.komoot.io/api/");
+    u.searchParams.set("q",q+ctx);u.searchParams.set("limit","8");u.searchParams.set("bbox","-74.1,-33.9,-34.7,5.4");
+    if(pos){u.searchParams.set("lat",pos[0].toFixed(4));u.searchParams.set("lon",pos[1].toFixed(4))}
+    try{
+      const r=await fetch(u);if(!r.ok)throw new Error(r.status);const j=await r.json();if(meu!==seq)return;
+      itens=(j.features||[]).filter(f=>f.properties.countrycode==="BR").map(f=>({p:f.properties,ll:[f.geometry.coordinates[1],f.geometry.coordinates[0]]}));render();
+    }catch(e){if(meu!==seq)return;itens=[];box.innerHTML='<div class="vazio">Busca de endereço indisponível agora. Digite o endereço normalmente.</div>';abrir()}
+  }
+  function escolher(it){
+    const p=it.p,rua=[p.street,p.housenumber].filter(Boolean).join(", ")||p.name||"",bairro=p.district||p.suburb;
+    inp.value=rua+(bairro?" - "+bairro:"");
+    const uf=UF_NOME[norm(p.state)];
+    if(uf){const c=cidades().find(x=>x.uf===uf&&x.k===norm(cidadeDe(p)));$("#np-uf").value=uf;$("#np-cidade").value=c?c.n:""}
+    if(p.osm_value==="fuel"){
+      if(p.name&&!$("#np-nome").value.trim())$("#np-nome").value=p.name;
+      const n=norm([p.name,p.brand].join(" ")),band=/ipiranga/.test(n)?"Ipiranga":/shell|raizen/.test(n)?"Shell":/petrobras|vibra|\bbr\b/.test(n)?"Petrobras / BR":/\bale\b/.test(n)?"Ale":"";
+      if(band)$("#np-band").value=band;
+    }
+    $("#np-lat").value=it.ll[0];$("#np-lng").value=it.ll[1];$("#npLocTxt").textContent="Localização do endereço escolhido.";
+    fechar();
+  }
+  inp.addEventListener("input",()=>{clearTimeout(timer);if(inp.value.trim().length<4){seq++;fechar();return}timer=setTimeout(buscar,350)});
+  inp.addEventListener("blur",()=>setTimeout(fechar,150));
+  inp.addEventListener("keydown",e=>{
+    if(box.hidden||!itens.length)return;
+    if(e.key==="ArrowDown"){marcar(Math.min(itens.length-1,ativo+1));e.preventDefault()}
+    else if(e.key==="ArrowUp"){marcar(Math.max(0,ativo-1));e.preventDefault()}
+    else if(e.key==="Enter"){e.preventDefault();escolher(itens[ativo>=0?ativo:0])}
+    else if(e.key==="Escape"){fechar();e.stopPropagation()}
+  });
+  box.addEventListener("pointerdown",e=>e.preventDefault());
+  box.addEventListener("click",e=>{const b=e.target.closest("button[data-i]");if(b)escolher(itens[+b.dataset.i])});
 })();
 $("#npCancel").onclick=()=>{$("#novoPosto").hidden=true;$("#np-lat").value=$("#np-lng").value=""};
 $("#novoPosto").onsubmit=async e=>{e.preventDefault();const nome=$("#np-nome").value.trim();if(!nome){toast("Informe o nome do posto");return}
