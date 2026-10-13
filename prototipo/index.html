@@ -1099,7 +1099,7 @@ $("#npLoc").onclick=()=>{
     return [l1,[p.district||p.suburb,cidadeDe(p),UF_NOME[norm(p.state)]].filter(Boolean).join(" · ")];
   }
   function render(){
-    box.innerHTML=(itens.length?itens.map((it,i)=>{const [a,b]=linhas(it.p);return `<button type="button" role="option" aria-selected="false" data-i="${i}"><span>${it.p.osm_value==="fuel"?"⛽ ":""}${esc(a)}<span class="l2">${esc(b)}</span></span></button>`}).join("")
+    box.innerHTML=(itens.length?itens.map((it,i)=>{const [l1,b]=linhas(it.p),a=it.num?`${l1}, ${it.num}`:l1;return `<button type="button" role="option" aria-selected="false" data-i="${i}"><span>${it.p.osm_value==="fuel"?"⛽ ":""}${esc(a)}<span class="l2">${esc(b)}</span></span></button>`}).join("")
       :'<div class="vazio">Nenhum endereço encontrado. Confira o texto ou digite o endereço normalmente.</div>')+'<div class="fonte">Endereços: © OpenStreetMap</div>';
     abrir();ativo=-1;
   }
@@ -1108,16 +1108,34 @@ $("#npLoc").onclick=()=>{
     const meu=++seq,cid=$("#np-cidade").value.trim(),uf=$("#np-uf").value;
     const ctx=cid&&!norm(q).includes(norm(cid))?`, ${cid}${uf?" "+UFS[uf]:""}`:uf&&!cid?`, ${UFS[uf]}`:"";
     const pos=M.me||(map?[map.getCenter().lat,map.getCenter().lng]:null);
-    const u=new URL("https://photon.komoot.io/api/");
-    u.searchParams.set("q",q+ctx);u.searchParams.set("limit","8");u.searchParams.set("bbox","-74.1,-33.9,-34.7,5.4");
-    if(pos){u.searchParams.set("lat",pos[0].toFixed(4));u.searchParams.set("lon",pos[1].toFixed(4))}
+    const consulta=async s=>{
+      const u=new URL("https://photon.komoot.io/api/");
+      u.searchParams.set("q",s+ctx);u.searchParams.set("limit","8");u.searchParams.set("bbox","-74.1,-33.9,-34.7,5.4");
+      if(pos){u.searchParams.set("lat",pos[0].toFixed(4));u.searchParams.set("lon",pos[1].toFixed(4))}
+      const r=await fetch(u);if(!r.ok)throw new Error(r.status);return (await r.json()).features||[]};
+    // Com número, o Photon procura aquele número exato; se ele não está no mapa, devolve outro "370"
+    // qualquer, até em outra cidade. Por isso busca também sem o número e guarda o número digitado.
+    // (número de rodovia não conta: "BR 101", "SP-270", "km 26")
+    const m0=q.match(/(^|[\s,])(\d{1,5}[a-z]?)(?=$|[\s,-])/i),mn=m0&&!/\b(br|km|[a-z]{2})[\s-]*$/i.test(q.slice(0,m0.index+m0[1].length))?m0:null;
+    const num=mn?mn[2]:"",semNum=num?q.replace(mn[0],mn[1]).replace(/[\s,]+/g," ").trim():"";
     try{
-      const r=await fetch(u);if(!r.ok)throw new Error(r.status);const j=await r.json();if(meu!==seq)return;
-      itens=(j.features||[]).filter(f=>f.properties.countrycode==="BR").map(f=>({p:f.properties,ll:[f.geometry.coordinates[1],f.geometry.coordinates[0]]}));render();
+      const rs=await Promise.allSettled([consulta(q),semNum.length>=4?consulta(semNum):Promise.resolve([])]);if(meu!==seq)return;
+      if(rs.every(r=>r.status==="rejected"))throw rs[0].reason;
+      const visto=new Set(),feats=rs.flatMap(r=>r.status==="fulfilled"?r.value:[]).filter(f=>{const p=f.properties;if(p.countrycode!=="BR")return false;
+        const k=norm([p.name,p.street,p.housenumber,p.district||p.suburb,cidadeDe(p)].join("|"));if(visto.has(k))return false;visto.add(k);return true});
+      // Ordena por quantas palavras digitadas aparecem inteiras no nome/rua ("Paulistano" não vale por "Paulista").
+      const toks=norm(semNum||q).split(/[^a-z0-9]+/).filter(t=>t.length>=3&&!/^(rua|avenida|av|rod|rodovia|estrada|travessa|alameda|praca)$/.test(t));
+      const pts=p=>{const w=new Set(norm([p.name,p.street].join(" ")).split(/[^a-z0-9]+/));
+        const n=toks.filter(t=>w.has(t)).length;return n+(n&&num&&p.housenumber===num?2:0)-(p.osm_value==="bus_stop"||p.osm_key==="amenity"&&p.osm_value!=="fuel"?.5:0)};
+      let lista=feats.map((f,i)=>({f,i,s:pts(f.properties)}));
+      if(lista.some(x=>x.s>=1))lista=lista.filter(x=>x.s>=1);
+      itens=lista.sort((a,b)=>b.s-a.s||a.i-b.i).slice(0,8).map(({f})=>{const p=f.properties;
+        return {p,ll:[f.geometry.coordinates[1],f.geometry.coordinates[0]],num:num&&!p.housenumber&&p.osm_key==="highway"&&p.osm_value!=="bus_stop"?num:""}});
+      render();
     }catch(e){if(meu!==seq)return;itens=[];box.innerHTML='<div class="vazio">Busca de endereço indisponível agora. Digite o endereço normalmente.</div>';abrir()}
   }
   function escolher(it){
-    const p=it.p,rua=[p.street,p.housenumber].filter(Boolean).join(", ")||p.name||"",bairro=p.district||p.suburb;
+    const p=it.p,rua=it.num?`${p.name}, ${it.num}`:[p.street,p.housenumber].filter(Boolean).join(", ")||p.name||"",bairro=p.district||p.suburb;
     inp.value=rua+(bairro?" - "+bairro:"");
     const uf=UF_NOME[norm(p.state)];
     if(uf){const c=cidades().find(x=>x.uf===uf&&x.k===norm(cidadeDe(p)));$("#np-uf").value=uf;$("#np-cidade").value=c?c.n:""}
@@ -1126,7 +1144,7 @@ $("#npLoc").onclick=()=>{
       const n=norm([p.name,p.brand].join(" ")),band=/ipiranga/.test(n)?"Ipiranga":/shell|raizen/.test(n)?"Shell":/petrobras|vibra|\bbr\b/.test(n)?"Petrobras / BR":/\bale\b/.test(n)?"Ale":/petronas/.test(n)?"Petronas":"";
       if(band)$("#np-band").value=band;
     }
-    $("#np-lat").value=it.ll[0];$("#np-lng").value=it.ll[1];$("#npLocTxt").textContent="Localização do endereço escolhido.";track("endereco_escolhido",{posto:p.osm_value==="fuel"});
+    $("#np-lat").value=it.ll[0];$("#np-lng").value=it.ll[1];$("#npLocTxt").textContent=it.num?"Localização aproximada (meio da rua: o número não está no mapa). No posto, use “Usar minha localização”.":"Localização do endereço escolhido.";track("endereco_escolhido",{posto:p.osm_value==="fuel"});
     fechar();
   }
   inp.addEventListener("input",()=>{clearTimeout(timer);if(inp.value.trim().length<4){seq++;fechar();return}timer=setTimeout(buscar,350)});
