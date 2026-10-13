@@ -160,6 +160,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ab{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
 .ab .r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .ab .s{font-size:.8rem;color:var(--muted)}
+.tq{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px 2px 6px;border:1px solid #5a3f12;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;vertical-align:2px;white-space:nowrap}
+.tq svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .empty{text-align:center;padding:26px 12px;color:var(--muted);display:grid;gap:10px;justify-items:center}
 .veic{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk)}
@@ -1004,8 +1006,10 @@ function renderHist(){
   const gasto=list.reduce((s,a)=>s+(a.total||0),0),meds=list.filter(a=>a.media);
   const mediaG=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   $("#hKpis").innerHTML=`<div class="metric"><div class="k">Abastecimentos</div><div class="v">${list.length}</div></div><div class="metric"><div class="k">Total gasto</div><div class="v">${brl(gasto)}</div></div><div class="metric hl"><div class="k">Média geral</div><div class="v">${mediaG?num(mediaG)+" km/l":"—"}</div></div>`;
+  // km rodados = km deste abastecimento − km do anterior do mesmo veículo
+  const rod={},ult={};[...S.mine].sort((a,b)=>a.data.localeCompare(b.data)).forEach(a=>{const p=ult[a.veiculoId];if(p&&a.km>p.km)rod[a.id]=a.km-p.km;ult[a.veiculoId]=a});
   $("#hist").innerHTML=list.length?list.map(a=>{const vv=v.find(x=>x.id===a.veiculoId);
-    return `<div class="ab"><div><b>${esc(a.postoNome)}</b><div class="s">${fdata(a.data)} · ${esc(vv?vv.modelo:"Veículo removido")} · ${a.km.toLocaleString("pt-BR")} km</div><div class="s">${esc(a.comb)} · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${a.media?`<div class="s">${num(a.media)} km/l</div>`:""}</div></div>`}).join("")
+    return `<div class="ab"><div><b>${esc(a.postoNome)}</b>${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24"><path d="M7 4h7l4 4v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM10 4V2.5M14 4l-2 3"/><rect x="8.5" y="10" width="7" height="7" rx="1" fill="currentColor"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · ${esc(vv?vv.modelo:"Veículo removido")} · ${a.km.toLocaleString("pt-BR")} km</div><div class="s">${esc(a.comb)} · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${a.media?`<div class="s">${num(a.media)} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km rodados</div>`:""}</div></div>`}).join("")
     :'<div class="empty card"><span>Nenhum abastecimento registrado.</span><span class="note">Use a aba Abastecer quando parar no posto.</span></div>';
 }
 
