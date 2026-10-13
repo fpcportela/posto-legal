@@ -319,7 +319,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <form id="novoPosto" class="card" hidden style="background:var(--sunk)">
         <h3>Novo posto</h3>
         <label>Nome do posto<input id="np-nome" required placeholder="Ex.: Auto Posto São Jorge"></label>
-        <label>Bandeira<select id="np-band"><option>Bandeira branca</option><option>Petrobras / BR</option><option>Ipiranga</option><option>Shell</option><option>Ale</option><option>Outra</option></select></label>
+        <label>Bandeira<select id="np-band"><option>Bandeira branca</option><option>Petrobras / BR</option><option>Ipiranga</option><option>Shell</option><option>Ale</option><option>Petronas</option><option>Outra</option></select></label>
         <div class="ac"><label for="np-end">Endereço</label><input id="np-end" placeholder="Digite rua e número para buscar" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="npEndList"><div class="ac-list" id="npEndList" role="listbox" hidden></div></div>
         <div class="two cityuf">
           <div class="ac"><label for="np-cidade">Cidade</label><input id="np-cidade" placeholder="Digite para buscar" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="npCidList"><div class="ac-list" id="npCidList" role="listbox" hidden></div></div>
@@ -1123,7 +1123,7 @@ $("#npLoc").onclick=()=>{
     if(uf){const c=cidades().find(x=>x.uf===uf&&x.k===norm(cidadeDe(p)));$("#np-uf").value=uf;$("#np-cidade").value=c?c.n:""}
     if(p.osm_value==="fuel"){
       if(p.name&&!$("#np-nome").value.trim())$("#np-nome").value=p.name;
-      const n=norm([p.name,p.brand].join(" ")),band=/ipiranga/.test(n)?"Ipiranga":/shell|raizen/.test(n)?"Shell":/petrobras|vibra|\bbr\b/.test(n)?"Petrobras / BR":/\bale\b/.test(n)?"Ale":"";
+      const n=norm([p.name,p.brand].join(" ")),band=/ipiranga/.test(n)?"Ipiranga":/shell|raizen/.test(n)?"Shell":/petrobras|vibra|\bbr\b/.test(n)?"Petrobras / BR":/\bale\b/.test(n)?"Ale":/petronas/.test(n)?"Petronas":"";
       if(band)$("#np-band").value=band;
     }
     $("#np-lat").value=it.ll[0];$("#np-lng").value=it.ll[1];$("#npLocTxt").textContent="Localização do endereço escolhido.";track("endereco_escolhido",{posto:p.osm_value==="fuel"});
