@@ -91,6 +91,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--brand);box-shadow:0 0 10px var(--brand)}
 .hero p{margin:0;color:var(--muted);font-size:1.08rem;line-height:1.6;max-width:36ch}
 .hero-act{display:grid;gap:12px;width:100%;max-width:340px}
+.first-veic{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font-family:var(--f-display);font-weight:700;font-size:1rem;color:var(--brand);background:var(--brand-soft);border:1px dashed var(--brand);border-radius:14px;padding:12px 16px;cursor:pointer}
+.first-veic svg{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:2}
+.first-veic .arr{margin-left:auto}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .stat{background:linear-gradient(180deg,#1b150e,#140f09);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:10px;min-width:0}
 .stat .k{display:flex;align-items:center;gap:9px;font-family:var(--f-mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);line-height:1.35}
@@ -290,6 +293,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <h1>Descubra qual posto <em>vale o seu tanque.</em></h1>
       <p>Registre cada abastecimento, calcule o consumo real (km/L) e avalie a qualidade do combustível.</p>
       <div class="hero-act">
+        <button type="button" class="first-veic" id="pVeic" hidden><svg viewBox="0 0 24 24"><path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16M4 16h16v3H4zM7 19v2M17 19v2"/></svg>Cadastre seu 1º veículo<svg class="arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         <button class="btn big" id="pNovo"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Novo abastecimento</button>
         <button class="btn sec big" id="pRank"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Ver ranking de postos</button>
       </div>
@@ -1002,6 +1006,7 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dat
 const IC={bomba:'<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 8h5M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/>',gota:'<circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-3.5"/>',estrela:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',sobe:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>'};
 function renderPainel(){
   const ab=S.mine,v=S.gar.veiculos||[];
+  $("#pVeic").hidden=v.length>0;
   const litros=ab.reduce((s,a)=>s+(a.litros||0),0),nts=ab.filter(a=>a.estrelas),meds=ab.filter(a=>a.media);
   const nota=nts.length?nts.reduce((s,a)=>s+a.estrelas,0)/nts.length:null,cons=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   const st=(ic,k,val,un)=>`<div class="stat"><div class="k"><svg viewBox="0 0 24 24">${IC[ic]}</svg>${k}</div><div class="v">${val}${un&&val!=="—"?`<small>${un}</small>`:""}</div></div>`;
@@ -1012,6 +1017,7 @@ function renderPainel(){
   $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>`<div class="ab"><div><b>${esc(a.postoNome)}</b><div class="s">${fdata(a.data)} · ${esc(a.comb)} · ${num(a.litros,2)} L</div></div><div class="r">${brl(a.total)}${a.media?`<div class="s">${num(a.media)} km/l</div>`:""}</div></div>`).join("")
     :'<div class="empty card"><span>Nenhum abastecimento ainda.</span><span class="note">Toque em “Novo abastecimento” quando parar no posto.</span></div>';
 }
+$("#pVeic").onclick=()=>{show("garagem");$("#vAddBtn").click()};
 $("#pNovo").onclick=()=>show("abastecer");
 $("#pRank").onclick=()=>show("rede");
 $("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b)show(b.dataset.go)};
