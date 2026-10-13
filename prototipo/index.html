@@ -441,15 +441,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <section class="view" id="v-garagem" hidden>
     <h2>Garagem</h2>
     <div class="card">
-      <h3>Meus veículos</h3>
+      <div class="row between"><h3>Meus veículos</h3><button class="btn small" type="button" id="vAddBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Adicionar veículo</button></div>
       <div id="veicList" class="hist"></div>
-      <form id="vForm" class="hist">
+      <form id="vForm" class="card" style="background:var(--sunk)" hidden>
+        <h3>Novo veículo</h3>
         <div class="two">
           <label>Modelo<input id="v-modelo" placeholder="Onix 1.0 2022" required></label>
           <label>Placa<input id="v-placa" placeholder="ABC1D23" maxlength="8"></label>
         </div>
         <label>Combustível usual<select id="v-comb"></select></label>
-        <button class="btn" type="submit">Adicionar veículo</button>
+        <div class="row"><button class="btn" type="submit">Salvar veículo</button><button class="btn ghost" type="button" id="vCancel">Cancelar</button></div>
       </form>
     </div>
     <div class="card">
@@ -973,7 +974,7 @@ function renderHist(){
 /* ---------- GARAGEM ---------- */
 function renderGaragem(){renderConta();renderAdmin();
   const v=S.gar.veiculos||[];
-  $("#veicList").innerHTML=v.length?v.map(x=>`<div class="veic"><div><b>${esc(x.modelo)}</b> ${x.placa?`<span class="plate-sm">${esc(x.placa)}</span>`:""}<div class="note">${esc(x.comb||"")}</div></div><button class="btn ghost small" data-rm="${x.id}">Remover</button></div>`).join(""):'<p class="note">Nenhum veículo ainda. Adicione o primeiro abaixo.</p>';
+  $("#veicList").innerHTML=v.length?v.map(x=>`<div class="veic"><div><b>${esc(x.modelo)}</b> ${x.placa?`<span class="plate-sm">${esc(x.placa)}</span>`:""}<div class="note">${esc(x.comb||"")}</div></div><button class="btn ghost small" data-rm="${x.id}">Remover</button></div>`).join(""):'<p class="note">Nenhum veículo ainda. Toque em “Adicionar veículo” para cadastrar o primeiro.</p>';
   const c=S.gar.config||CFG_PADRAO;
   if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=c.baixo;$("#c-alto").value=c.alto;$("#c-min").value=c.min}
 }
@@ -1192,8 +1193,10 @@ $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
 $("#hVeic").onchange=renderHist;
+$("#vAddBtn").onclick=()=>{$("#vForm").hidden=false;$("#vAddBtn").hidden=true;$("#v-modelo").focus()};
+$("#vCancel").onclick=()=>{$("#vForm").reset();$("#vForm").hidden=true;$("#vAddBtn").hidden=false};
 $("#vForm").onsubmit=async e=>{e.preventDefault();const modelo=$("#v-modelo").value.trim();if(!modelo){toast("Informe o modelo");return}
-  try{const nv=await addVeiculo(modelo,$("#v-placa").value.trim(),$("#v-comb").value);$("#vForm").reset();toast("Veículo adicionado");renderAll();$("#veiculo").value=nv.id;prefillVeic();if(S.sel)show("abastecer")}catch(err){toast("Não foi possível salvar: "+(err.message||err.code))}};
+  try{const nv=await addVeiculo(modelo,$("#v-placa").value.trim(),$("#v-comb").value);$("#vForm").reset();$("#vForm").hidden=true;$("#vAddBtn").hidden=false;toast("Veículo adicionado");renderAll();$("#veiculo").value=nv.id;prefillVeic();if(S.sel)show("abastecer")}catch(err){toast("Não foi possível salvar: "+(err.message||err.code))}};
 $("#veicList").onclick=async e=>{const b=e.target.closest("[data-rm]");if(!b)return;
   if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Confirmar remoção";b.classList.remove("ghost");return}
   S.gar={...S.gar,veiculos:S.gar.veiculos.filter(x=>x.id!==b.dataset.rm)};try{await saveGar();toast("Veículo removido");renderAll()}catch(err){toast("Não foi possível remover")}};
