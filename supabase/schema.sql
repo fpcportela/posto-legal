@@ -192,6 +192,29 @@ grant select, insert, update, delete on public.profiles, public.postos, public.g
 grant insert on public.eventos to anon, authenticated;
 grant select on public.eventos to authenticated;
 
+-- ---------- suspeitas de fraude (relatos públicos na rede) ----------
+-- Marcadas no abastecimento e gravadas no posto em que ele foi feito. Todo usuário logado lê;
+-- cada um grava e apaga só os próprios; o administrador apaga relatos abusivos.
+create table if not exists public.suspeitas (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  nome text,
+  posto_id uuid not null references public.postos(id) on delete cascade,
+  abastecimento_id text,
+  categoria text not null,
+  motivo text not null check (char_length(motivo) between 10 and 500),
+  criado_em timestamptz not null default now()
+);
+create index if not exists suspeitas_posto on public.suspeitas(posto_id);
+alter table public.suspeitas enable row level security;
+drop policy if exists susp_ler on public.suspeitas;
+drop policy if exists susp_criar on public.suspeitas;
+drop policy if exists susp_apagar on public.suspeitas;
+create policy susp_ler on public.suspeitas for select to authenticated using (true);
+create policy susp_criar on public.suspeitas for insert to authenticated with check (user_id = auth.uid());
+create policy susp_apagar on public.suspeitas for delete to authenticated using (user_id = auth.uid() or public.is_admin());
+grant select, insert, delete on public.suspeitas to authenticated;
+
 -- ---------- visões para análise (só administradores enxergam linhas) ----------
 create or replace view public.uso_por_dia with (security_invoker = on) as
   select date_trunc('day', criado_em at time zone 'America/Sao_Paulo')::date as dia,

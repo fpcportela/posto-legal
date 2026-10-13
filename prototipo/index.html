@@ -161,7 +161,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ab{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
 .ab .r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .ab .s{font-size:.8rem;color:var(--muted)}
+.ab .dest{color:var(--brand);font-weight:700}
 .tq{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px 2px 6px;border:1px solid #5a3f12;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;vertical-align:2px;white-space:nowrap}
+.susp{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px 2px 6px;border:1px solid rgba(248,113,113,.45);border-radius:999px;background:var(--bad-soft);color:var(--bad);font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.04em;vertical-align:2px;white-space:nowrap;cursor:pointer}
+.susp svg,.btn.warn svg,.susp-box svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn.warn{background:var(--bad-soft);color:var(--bad);border-color:rgba(248,113,113,.45)}
+.susp-box{border:1px solid rgba(248,113,113,.45);background:var(--bad-soft);border-radius:var(--r-sm);padding:12px 14px;display:grid;gap:6px;justify-items:start}
+.susp-box strong{display:flex;align-items:center;gap:6px;color:var(--bad)}
+.relato{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:4px;font-size:.92rem}
+.pin .pw{position:absolute;top:-9px;right:-9px;width:18px;height:18px;border-radius:50%;background:var(--bad);color:#1a0505;font-size:.72rem;font-weight:800;display:grid;place-items:center;line-height:1}
 .tq svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .tq .marca{opacity:.55;stroke-width:1.4}
 .tq .bomba{fill:currentColor;fill-rule:evenodd;stroke:none}
@@ -391,6 +399,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <label>Críticas, elogios ou sugestões<textarea id="obs" placeholder="Atendimento, limpeza, bomba aferida, preço, banheiro…"></textarea></label>
         <p class="note">Avalie pelo que você viveu lá e pelo rendimento do combustível. Sua nota e comentário ficam visíveis para todos os motoristas. Placa e quilometragem ficam só na sua conta.</p>
       </div>
+      <div class="card" id="suspCard">
+        <button type="button" class="btn warn block" id="suspBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude</button>
+        <div class="susp-box" id="suspResumo" hidden>
+          <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude marcada</strong>
+          <div class="note" id="suspTxt"></div>
+          <div class="row"><button type="button" class="btn ghost small" id="suspEdit">Editar</button><button type="button" class="btn ghost small" id="suspRm">Remover</button></div>
+          <p class="note">Ela será registrada neste posto ao salvar o abastecimento.</p>
+        </div>
+      </div>
       <button class="btn block" type="submit" id="saveAb">Salvar abastecimento</button>
     </form>
   </section>
@@ -420,6 +437,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <p class="note">Só você vê esse nome. Para os outros usuários o posto continua com a razão social. Deixe em branco para voltar a ela.</p>
     <div class="row"><button class="btn" type="submit">Salvar</button><button class="btn ghost" type="button" id="renCancel">Cancelar</button></div>
   </form></div>
+  <div class="modal-bg" id="suspAsk" hidden role="dialog" aria-modal="true" aria-labelledby="suspTit"><form class="card" id="suspForm" novalidate>
+    <h2 id="suspTit">Suspeita de fraude</h2>
+    <p class="note" id="suspPosto"></p>
+    <label>O que aconteceu?<select id="susp-cat"><option>Bomba marcou mais litros do que cabe no tanque</option><option>Combustível adulterado (carro falhou ou rendeu bem menos)</option><option>Valor cobrado diferente do marcado na bomba</option><option>Preço diferente do anunciado</option><option>Outro</option></select></label>
+    <label>Descreva o motivo da suspeita<textarea id="susp-motivo" maxlength="500" placeholder="Ex.: o tanque tem 50 L e a bomba marcou 58 L. Pedi para aferir e o frentista recusou."></textarea></label>
+    <p class="note">Seu relato fica visível para todos os motoristas, com seu primeiro nome. Conte só o que você viu, sem ofensas.</p>
+    <div class="row"><button class="btn" type="submit">Marcar suspeita</button><button class="btn ghost" type="button" id="suspCancel">Cancelar</button></div>
+  </form></div>
+  <div class="modal-bg" id="suspVer" hidden role="dialog" aria-modal="true" aria-labelledby="suspVerTit"><div class="card" id="suspVerIn"></div></div>
   <div class="modal-bg" id="gpsAsk" hidden role="dialog" aria-modal="true" aria-labelledby="gpsTit"><div class="card" id="gpsIn"></div></div>
 
   <!-- REDE -->
@@ -502,7 +528,7 @@ const SUPABASE_URL="",SUPABASE_KEY="";
 const COMBS=["Gasolina comum","Gasolina aditivada","Gasolina premium","Etanol","Diesel S10","Diesel S500","GNV"];
 const RATE_TXT=["","Não gostei","Ruim","Regular","Bom","Gostei muito"];
 const CFG_PADRAO={baixo:2.5,alto:4.2,min:2};
-const S={uid:null,mode:"local",postos:{},pub:{},mine:[],gar:{veiculos:[],config:{...CFG_PADRAO}},demo:false,sel:null,stars:0,names:{},pubNome:{},conta:null,contaOk:false,usuarios:[],isOwner:false};
+const S={uid:null,mode:"local",postos:{},pub:{},susp:{},suspPend:null,mine:[],gar:{veiculos:[],config:{...CFG_PADRAO}},demo:false,sel:null,stars:0,names:{},pubNome:{},conta:null,contaOk:false,usuarios:[],isOwner:false};
 let db=null,user=null,sample=null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -549,6 +575,11 @@ const apelido=id=>((S.gar&&S.gar.apelidos)||{})[id]||"";
 const nomeP=(id,p)=>apelido(id)||(p&&p.nome)||"";
 const subP=(id,p)=>[apelido(id)?"Razão social: "+p.nome:"",p.bandeira,local(p),p.endereco].filter(Boolean).join(" · ");
 const renBtn=id=>`<button class="btn ghost small" type="button" data-ren="${id}">Renomear</button>`;
+// Suspeitas de fraude relatadas pelos motoristas (rede): S.susp[postoId] = [{id,uid,nome,categoria,motivo,data}]
+const ICO_ATENCAO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>';
+const susp=id=>(S.susp&&S.susp[id])||[];
+const suspTag=id=>{const n=susp(id).length;return n?`<span class="susp" role="button" tabindex="0" data-susp="${id}" title="Ver os relatos de suspeita de fraude">${ICO_ATENCAO}${n} ${n>1?"suspeitas":"suspeita"}</span>`:""};
+const suspBox=id=>{const n=susp(id).length;return n?`<div class="susp-box"><strong>${ICO_ATENCAO}${n} ${n>1?"suspeitas de fraude relatadas":"suspeita de fraude relatada"}</strong><p class="note">Relatos de motoristas, não verificados.</p><button class="btn ghost small" type="button" data-susp="${id}">Ver relatos</button></div>`:""};
 function allItems(){const out=[];const src=S.demo?{...S.pub,...DEMO_PUB}:S.pub;for(const [uid,items] of Object.entries(src))for(const it of items||[])out.push({...it,uid});return out}
 
 /* ---------- agregação da rede ---------- */
@@ -601,13 +632,13 @@ let CONTAS={};
 const garPadrao=()=>({veiculos:[],config:{...CFG_PADRAO}});
 function lsLoad(){
   const o=lsGet(LS,{});CONTAS=lsGet(LS_CONTAS,{});
-  S.postos=o.postos||{};S.pub=o.pub||{};S.pubNome=o.pubNome||{};
+  S.postos=o.postos||{};S.pub=o.pub||{};S.pubNome=o.pubNome||{};S.susp=o.susp||{};
   // migração da versão sem login (uma conta só, dados soltos)
   if(o.conta||o.mine||o.gar){
     const orf={mine:o.mine||[],gar:o.gar||null,pub:S.pub.local||null};delete S.pub.local;
     if(o.conta){const uid="u"+Date.now();CONTAS[uid]=o.conta;lsSet(lsU(uid),{mine:orf.mine,gar:orf.gar});if(orf.pub)S.pub[uid]=orf.pub;lsSet(LS_SESSAO,uid)}
     else if(orf.mine.length||(orf.gar&&(orf.gar.veiculos||[]).length)||orf.pub)lsSet(LS_ORFAO,orf);
-    lsSet(LS_CONTAS,CONTAS);lsSet(LS,{postos:S.postos,pub:S.pub,pubNome:S.pubNome});
+    lsSet(LS_CONTAS,CONTAS);lsSet(LS,{postos:S.postos,pub:S.pub,pubNome:S.pubNome,susp:S.susp});
   }
   entrarLocal(lsGet(LS_SESSAO,null));
   S.auth=Object.keys(CONTAS).length?"login":"cadastro";S.contaOk=true;
@@ -620,7 +651,7 @@ function entrarLocal(uid){
 }
 function lsSave(){
   if(S.mode!=="local")return;
-  lsSet(LS,{postos:S.postos,pub:S.pub,pubNome:S.pubNome});
+  lsSet(LS,{postos:S.postos,pub:S.pub,pubNome:S.pubNome,susp:S.susp});
   if(S.uid&&S.conta){CONTAS[S.uid]=S.conta;lsSet(LS_CONTAS,CONTAS);lsSet(lsU(S.uid),{mine:S.mine,gar:S.gar})}
 }
 /* ---------- banco online (Supabase) ---------- */
@@ -645,6 +676,10 @@ async function carregarRede(){
   const [p,a]=await Promise.all([sb.from("postos").select("*"),sb.from("avaliacoes").select("*").order("data").limit(10000)]);
   if(p.error)throw p.error;if(a.error)throw a.error;
   S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
+  // suspeitas: se a tabela ainda não existe (schema.sql não rodado de novo), o app segue sem elas
+  const sp=await sb.from("suspeitas").select("*").order("criado_em").limit(10000);S.susp={};
+  if(sp.error)console.warn("suspeitas:",sp.error.message);
+  else for(const r of sp.data)(S.susp[r.posto_id]=S.susp[r.posto_id]||[]).push({id:r.id,uid:r.user_id,nome:r.nome,categoria:r.categoria,motivo:r.motivo,data:r.criado_em});
   S.pub={};S.pubNome={};
   for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas!=null?Number(r.estrelas):undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
 }
@@ -714,6 +749,12 @@ async function renomearPosto(id,nome){
   const ap={...(S.gar.apelidos||{})};if(nome)ap[id]=nome;else delete ap[id];
   S.gar={...S.gar,apelidos:ap};await saveGar();track("posto_renomeado",{apagou:!nome});
 }
+async function saveSuspeita(s){
+  const item={...s,uid:S.uid,nome:primeiroNome()};
+  if(sb){const {data,error}=await sb.from("suspeitas").insert({posto_id:s.postoId,abastecimento_id:s.abastId,categoria:s.categoria,motivo:s.motivo,nome:item.nome}).select("id").single();if(error)throw error;item.id=data.id}
+  else if(db){await db.collection("suspeitas").add(item);return}
+  (S.susp[s.postoId]=S.susp[s.postoId]||[]).push(item);if(!sb)lsSave();
+}
 async function saveGar(){if(sb){const {error}=await sb.from("garagem").upsert({user_id:S.uid,dados:S.gar,atualizado_em:new Date().toISOString()});if(error)throw error;return}if(db)await db.doc(`data/users/${S.uid}/garagem`).set(S.gar);else lsSave()}
 async function saveAbast(a){if(sb){const {error}=await sb.from("abastecimentos").upsert(abLinha(a));if(error)throw error;S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);return}if(db)await db.doc(`data/users/${S.uid}/${a.id}`).set(a);else{S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);lsSave()}}
 async function savePub(items,ids){const nome=primeiroNome();
@@ -732,11 +773,12 @@ async function init(){
   [db,user,sample]=c&&c.use?await Promise.all(["db","user","sample"].map(n=>c.use(n).catch(()=>null))):[null,null,null];
   const uid=user?await user.id().catch(()=>null):null;
   if(!db||!uid){db=null;$("#status").innerHTML="Modo local · dados só neste aparelho";renderAll();gate();return}
-  S.mode="db";S.uid=uid;S.postos={};S.pub={};S.mine=[];S.gar={veiculos:[],config:{...CFG_PADRAO}};S.conta=null;S.contaOk=false;gate();
+  S.mode="db";S.uid=uid;S.postos={};S.pub={};S.susp={};S.mine=[];S.gar={veiculos:[],config:{...CFG_PADRAO}};S.conta=null;S.contaOk=false;gate();
   $("#status").innerHTML="Conectado à rede";
   try{if(await user.can("data.write")===false)$("#status").innerHTML="Somente leitura"}catch(e){}
   const err=e=>toast("Falha de conexão: "+(e.message||e.code));
   db.collection("postos").onSnapshot(s=>{S.postos={};s.docs.forEach(x=>S.postos[x.id]=x.data());renderAll()},err);
+  db.collection("suspeitas").onSnapshot(s=>{S.susp={};s.docs.forEach(x=>{const d=x.data();(S.susp[d.postoId]=S.susp[d.postoId]||[]).push(d)});renderAll()},err);
   db.collection("avaliacoes").onSnapshot(s=>{S.pub={};s.docs.forEach(x=>{S.pub[x.id]=(x.data().itens)||[];S.pubNome[x.id]=x.data().nome||""});renderAll();loadNames()},err);
   db.collection("data/users/"+uid).onSnapshot(s=>{S.mine=[];s.docs.forEach(x=>{if(x.id==="garagem")S.gar={veiculos:[],config:{...CFG_PADRAO},...x.data()};else S.mine.push(x.data())});renderAll()},err);
   db.doc("cadastros/"+uid).onSnapshot(s=>{S.conta=s.exists?s.data():null;S.contaOk=true;gate();renderGaragem()},err);
@@ -755,10 +797,11 @@ function renderPostoList(){
   const ids=Object.keys(P).filter(id=>!q||[P[id].nome,apelido(id),P[id].bandeira,local(P[id])].join(" ").toLowerCase().includes(q));
   ids.sort((a,b)=>nomeP(a,P[a]).localeCompare(nomeP(b,P[b])));
   $("#postoList").innerHTML=ids.length?ids.map(id=>{const st=stats(id),p=P[id];
-    return `<button class="posto" data-id="${id}"><span class="n">${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} (${st.n})</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
+    return `<button class="posto" data-id="${id}"><span class="n">${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} (${st.n})</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
     :`<div class="empty"><span>${Object.keys(P).length?"Nenhum posto encontrado.":"Nenhum posto cadastrado na rede ainda."}</span><span class="note">Cadastre o posto em que você está para registrar o abastecimento.</span></div>`;
 }
 function selectPosto(id){
+  if(S.sel!==id){S.suspPend=null;pintaSuspPend()} // a suspeita marcada vale só para o posto em que foi marcada
   S.sel=id;const p=allPostos()[id];if(!p)return;
   $("#pickCard").hidden=true;$("#arrive").hidden=true;$("#chosenCard").hidden=false;$("#abForm").hidden=false;
   $("#chNome").textContent=nomeP(id,p);$("#chSub").textContent=subP(id,p);
@@ -767,7 +810,7 @@ function selectPosto(id){
 function renderAlert(){
   if(!S.sel)return;const st=stats(S.sel),r=reputacao(st);
   const res=resumoIA[S.sel]||resumoSimples(st.its);
-  $("#repAlert").innerHTML=`<div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div><p class="note" style="color:inherit">${r.txt}</p>
+  $("#repAlert").innerHTML=suspBox(S.sel)+`<div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div><p class="note" style="color:inherit">${r.txt}</p>
     ${st.n?`<div class="summary" id="alSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="alIA" type="button">Resumir comentários com IA</button>':""}`:""}
     ${Object.keys(st.precos).length?`<div class="note" style="color:inherit">Último preço relatado: ${Object.entries(st.precos).map(([c,v])=>`${esc(c)} ${brl(v.preco)}`).join(" · ")}</div>`:""}</div>`;
   const b=$("#alIA");if(b)b.onclick=()=>gerarResumo(S.sel,$("#alSum"),b);
@@ -830,7 +873,7 @@ function renderRede(){
   $("#demoBox").innerHTML=!real||S.demo?`<div class="demo"><span>${S.demo?"Mostrando postos e avaliações <b>de exemplo</b> para você ver como a rede funciona. Eles não são gravados.":"A rede ainda não tem postos. Quer ver um exemplo de como ela fica com avaliações?"}</span><button class="btn ghost small" id="demoT">${S.demo?"Esconder exemplo":"Ver exemplo"}</button></div>`:"";
   const dt=$("#demoT");if(dt)dt.onclick=()=>{S.demo=!S.demo;renderAll()};
   $("#rank").innerHTML=list.length?list.map(({id,p,st})=>{const kml=st.kml.length?st.kml.reduce((a,i)=>a+i.kmL,0)/st.kml.length:null;
-    return `<button class="rk" data-id="${id}"><span class="n">${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}${kml?` · rendimento relatado ${num(kml)} km/l`:""}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} · ${st.n} aval.</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
+    return `<button class="rk" data-id="${id}"><span class="n">${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}${kml?` · rendimento relatado ${num(kml)} km/l`:""}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} · ${st.n} aval.</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
     :`<div class="empty card"><span>Nenhum posto na rede ainda.</span><span class="note">Os postos aparecem aqui assim que alguém registra um abastecimento.</span></div>`;
 }
 /* navegação externa: Waze e Google Maps (abrem o app no celular, ou o site) */
@@ -849,9 +892,10 @@ function renderDetail(id){
   const kml=st.kml.slice().sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6);
   const reviews=st.its.filter(i=>i.estrelas).sort((a,b)=>(b.avaliadoEm||b.data).localeCompare(a.avaliadoEm||a.data)).slice(0,20);
   $("#detail").hidden=false;
-  $("#detail").innerHTML=`<div class="row between"><h2>${esc(nomeP(id,p))}</h2><div class="row">${renBtn(id)}<button class="btn ghost small" id="detClose">Fechar</button></div></div>
+  $("#detail").innerHTML=`<div class="row between"><h2>${esc(nomeP(id,p))}${suspTag(id)}</h2><div class="row">${renBtn(id)}<button class="btn ghost small" id="detClose">Fechar</button></div></div>
     <p class="note">${esc(subP(id,p))}</p>
     ${navHtml(id,p)}
+    ${susp(id).length?`<div class="susp-box"><strong>${ICO_ATENCAO}Suspeitas de fraude (${susp(id).length})</strong><p class="note">Relatos de motoristas, não verificados.</p></div>${relatosHtml(id)}`:""}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="summary" id="detSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="detIA">Resumir comentários com IA</button>':""}</div>
     ${Object.keys(st.precos).length?`<h3>Último preço relatado</h3><div class="prices">${Object.entries(st.precos).map(([c,v])=>`<div class="metric"><div class="k">${esc(c)}</div><div class="v">${brl(v.preco)}</div><div class="note">${fdata(v.data)}</div></div>`).join("")}</div>`:""}
@@ -908,7 +952,7 @@ function renderMapa(){
     const k=coords(id,p);if(!k){semLoc++;continue}
     const {st,r,pr}=infoPosto(id);
     if(M.soComb&&!pr)continue;n++;
-    const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}"><span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
+    const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
     L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:nomeP(id,p),zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
   }
   $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span>`;
@@ -920,7 +964,7 @@ function renderMapa(){
 function abrirPosto(id){
   const p=allPostos()[id];if(!p)return;
   M.alvo=id;const {st,r,comb,pr,kml,res}=infoPosto(id),k=coords(id,p);
-  $("#sheetIn").innerHTML=`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div><h2>${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}</h2><p class="note">${esc(subP(id,p))}${M.me&&k?" · a "+fmtDist(distM(M.me,k)):""}</p></div><div class="row" style="flex-wrap:nowrap">${renBtn(id)}<button class="btn ghost small" id="shClose">Fechar</button></div></div>
+  $("#sheetIn").innerHTML=`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div><h2>${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</h2><p class="note">${esc(subP(id,p))}${M.me&&k?" · a "+fmtDist(distM(M.me,k)):""}</p></div><div class="row" style="flex-wrap:nowrap">${renBtn(id)}<button class="btn ghost small" id="shClose">Fechar</button></div></div>
     <div class="readout">
       <div class="metric hl"><div class="k">Nota</div><div class="v">${st.n?num(st.media):"—"}</div><div class="note">${st.n} avaliação(ões)</div></div>
       <div class="metric"><div class="k">${esc(comb)}</div><div class="v">${pr?brl(pr.preco):"—"}</div><div class="note">${pr?"relatado em "+fdata(pr.data):"sem preço relatado"}</div></div>
@@ -928,6 +972,7 @@ function abrirPosto(id){
     </div>
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       ${st.n?`<div class="summary" id="shSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="shIA" type="button">Resumir comentários com IA</button>':""}`:`<p class="note" style="color:inherit">${r.txt}</p>`}</div>
+    ${suspBox(id)}
     <div class="row"><button class="btn" id="shAbast">Abastecer aqui</button><button class="btn ghost" id="shDet">Todas as avaliações</button></div>
     ${navHtml(id,p)}
     <div><button class="btn ghost small" id="shSim">Simular chegada (teste do GPS)</button></div>`;
@@ -994,7 +1039,7 @@ function perguntar(id,simulado){
   const {st,r,comb,pr,res}=infoPosto(id),v=veicMapa();
   const destaque=[...res.elogios.slice(0,1).map(x=>["pos","Elogio",x]),...res.reclamacoes.slice(0,1).map(x=>["neg","Reclamação",x])];
   $("#gpsIn").innerHTML=`<h3><span class="pulse" style="background:var(--brand)"></span>${simulado?"Simulação: você parou num posto":"Você parou num posto"}</h3>
-    <h2 id="gpsTit">Vai abastecer no ${esc(nomeP(id,p))}?</h2>
+    <h2 id="gpsTit">Vai abastecer no ${esc(nomeP(id,p))}?</h2>${suspBox(id)}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brl(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
       ${destaque.length?`<div class="summary">${destaque.map(([c,t,x])=>`<div class="${c}"><b>${t}</b>${esc(x)}</div>`).join("")}</div>`:""}</div>
@@ -1023,7 +1068,7 @@ function renderHist(){
   $("#hKpis").innerHTML=`<div class="metric"><div class="k">Abastecimentos</div><div class="v">${list.length}</div></div><div class="metric"><div class="k">Total gasto</div><div class="v">${brl(gasto)}</div></div><div class="metric hl"><div class="k">Média geral</div><div class="v">${mediaG?num(mediaG)+" km/l":"—"}</div></div>`;
   const {rod,med}=consumoPorAbast();
   $("#hist").innerHTML=list.length?list.map(a=>{const vv=v.find(x=>x.id===a.veiculoId);
-    return `<div class="ab"><div><b>${esc(a.postoNome)}</b>${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · ${esc(vv?vv.modelo:"Veículo removido")} · ${a.km.toLocaleString("pt-BR")} km</div><div class="s">${esc(a.comb)} · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
+    return `<div class="ab"><div><b>${esc(a.postoNome)}</b>${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
     :'<div class="empty card"><span>Nenhum abastecimento registrado.</span><span class="note">Use a aba Abastecer quando parar no posto.</span></div>';
 }
 
@@ -1256,6 +1301,10 @@ $("#abForm").onsubmit=async e=>{
   items.sort((x,y)=>x.data.localeCompare(y.data));
   $("#saveAb").disabled=true;
   try{await saveAbast(a);if(prevAb)await saveAbast(prevAb);await savePub(items.slice(-400),[id,c.last&&c.last.id].filter(Boolean));
+    if(S.suspPend){const sp=S.suspPend;
+      try{await saveSuspeita({id:"su-"+Date.now(),postoId:a.postoId,abastId:id,categoria:sp.categoria,motivo:sp.motivo,data:now});track("suspeita_fraude",{categoria:sp.categoria})}
+      catch(err){toast("Abastecimento salvo, mas a suspeita não foi registrada: "+(err.message||err.code))}
+      S.suspPend=null;pintaSuspPend()}
     track("abastecimento_salvo",{comb,media:a.media||null,avaliou:!!c.last,estrelas:c.last?S.stars:null,cheio:c.cheio});toast(c.media?`Salvo! Média de ${num(c.media)} km/l`:"Abastecimento salvo");
     $("#abForm").reset();ultimoDigitado=null;$("#cheio").checked=false;S.stars=0;document.querySelectorAll("#rate button").forEach(x=>x.classList.remove("on","half"));$("#rateLabel").textContent="Toque nas estrelas";
     $("#trocar").click();renderAll();show("historico");
@@ -1271,9 +1320,28 @@ $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config
   try{await saveGar()}catch(e){}
   track("gps_aviso",{ligado:on});
   if(on){startGps(false);toast("Aviso por GPS ligado")}else{if(M.watch!=null)navigator.geolocation.clearWatch(M.watch);M.watch=null;toast("Aviso por GPS desligado")}};
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#suspVer").hidden)$("#suspVer").hidden=true;else if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
 $("#hVeic").onchange=renderHist;
+/* suspeita de fraude: marcada no abastecimento, registrada no posto atual ao salvar */
+function relatosHtml(id){return [...susp(id)].sort((a,b)=>(b.data||"").localeCompare(a.data||"")).map(x=>`<div class="relato"><strong>${esc(x.categoria)}</strong><div>${esc(x.motivo)}</div><div class="note">${esc(x.uid===S.uid?"Você":(x.nome||"Motorista"))} · ${fdata(x.data)}</div></div>`).join("")}
+function verSuspeitas(id){const p=allPostos()[id];if(!p)return;
+  $("#suspVerIn").innerHTML=`<div class="row between"><h2 id="suspVerTit">Suspeitas de fraude</h2><button class="btn ghost small" type="button" id="suspVerFechar">Fechar</button></div><p class="note">${esc(nomeP(id,p))} · ${susp(id).length} relato(s) de motoristas, não verificados.</p>${relatosHtml(id)}`;
+  $("#suspVer").hidden=false;$("#suspVerFechar").onclick=()=>$("#suspVer").hidden=true;$("#suspVerFechar").focus()}
+$("#suspVer").onclick=e=>{if(e.target.id==="suspVer")$("#suspVer").hidden=true};
+// captura: o selo fica dentro do botão do posto; abre os relatos sem selecionar o posto
+document.addEventListener("click",e=>{const b=e.target.closest("[data-susp]");if(!b)return;e.stopPropagation();e.preventDefault();verSuspeitas(b.dataset.susp)},true);
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("span[data-susp]")){e.preventDefault();e.target.click()}});
+function pintaSuspPend(){const sp=S.suspPend;$("#suspBtn").hidden=!!sp;$("#suspResumo").hidden=!sp;$("#suspTxt").textContent=sp?`${sp.categoria}: ${sp.motivo}`:""}
+function abrirSuspeita(){if(!S.sel){toast("Escolha o posto primeiro");return}const sp=S.suspPend;
+  $("#suspPosto").textContent="Posto: "+nomeP(S.sel,allPostos()[S.sel]);$("#susp-cat").selectedIndex=0;if(sp)$("#susp-cat").value=sp.categoria;$("#susp-motivo").value=sp?sp.motivo:"";
+  $("#suspAsk").hidden=false;$("#susp-motivo").focus()}
+const fecharSuspeita=()=>{$("#suspAsk").hidden=true};
+$("#suspBtn").onclick=abrirSuspeita;$("#suspEdit").onclick=abrirSuspeita;$("#suspRm").onclick=()=>{S.suspPend=null;pintaSuspPend()};
+$("#suspCancel").onclick=fecharSuspeita;$("#suspAsk").onclick=e=>{if(e.target.id==="suspAsk")fecharSuspeita()};
+$("#suspForm").onsubmit=e=>{e.preventDefault();const motivo=$("#susp-motivo").value.replace(/\s+/g," ").trim();
+  if(motivo.length<10){toast("Descreva o motivo (pelo menos 10 caracteres)");$("#susp-motivo").focus();return}
+  S.suspPend={categoria:$("#susp-cat").value,motivo};fecharSuspeita();pintaSuspPend();toast("Suspeita marcada. Ela será registrada ao salvar o abastecimento.")};
 function abrirRenomear(id){const p=allPostos()[id];if(!p)return;S.ren=id;$("#renRazao").textContent="Razão social: "+p.nome;$("#ren-nome").value=apelido(id);$("#renAsk").hidden=false;$("#ren-nome").focus()}
 function fecharRenomear(){$("#renAsk").hidden=true;S.ren=null}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-ren]");if(b){e.stopPropagation();abrirRenomear(b.dataset.ren)}});
@@ -1372,7 +1440,7 @@ async function sair(msg){
   if(sb){track("logout");try{await sb.auth.signOut()}catch(e){}}
   lsSet(LS_2FA,null);
   S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="painel";S.isOwner=false;S.usuarios=[];
-  if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.pubNome={}}else entrarLocal(null);
+  if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.susp={};S.pubNome={}}else entrarLocal(null);
   fillCadForm({});["#lg-senha","#cd-senha","#cd-senha2","#cd-code"].forEach(x=>$(x).value="");
   if(msg)toast(msg);S.auth="login";renderAll();gate();
 }
