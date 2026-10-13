@@ -75,6 +75,8 @@ textarea{min-height:80px;resize:vertical}
 .btn.ghost{background:transparent;color:var(--brand);border-color:var(--line2);box-shadow:none}
 .btn.sec{background:rgba(255,255,255,.03);color:var(--ink);border-color:var(--line2)}
 .btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+.navgo{display:grid;gap:8px}
+a.btn{text-decoration:none}
 .btn.small{font-size:.86rem;padding:7px 13px;border-radius:11px}
 .btn.big{font-size:1.12rem;padding:15px 24px;border-radius:16px}
 .btn.block{width:100%}
@@ -798,6 +800,16 @@ function renderRede(){
     return `<button class="rk" data-id="${id}"><span class="n">${esc(p.nome)} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}${kml?` · rendimento relatado ${num(kml)} km/l`:""}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} · ${st.n} aval.</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
     :`<div class="empty card"><span>Nenhum posto na rede ainda.</span><span class="note">Os postos aparecem aqui assim que alguém registra um abastecimento.</span></div>`;
 }
+/* navegação externa: Waze e Google Maps (abrem o app no celular, ou o site) */
+function navHtml(id,p){
+  const k=coords(id,p),end=[p.endereco,local(p)].filter(Boolean).join(", ");
+  if(!k&&!end)return "";
+  const q=k?k.map(n=>(+n).toFixed(6)).join(","):encodeURIComponent(p.nome+", "+end);
+  const wz=k?`https://waze.com/ul?ll=${q}&navigate=yes`:`https://waze.com/ul?q=${q}&navigate=yes`;
+  const gm=`https://www.google.com/maps/dir/?api=1&destination=${q}`;
+  return `<div class="navgo"><h3>Ir até o posto</h3><div class="row"><a class="btn sec small" href="${wz}" target="_blank" rel="noopener" data-nav="waze"><svg viewBox="0 0 24 24"><path d="M5 17.5C3.5 16.4 3 14.6 3 13a9 9 0 0 1 18 0c0 3.9-3 7-7 7h-3"/><circle cx="8" cy="20" r="1.6"/><circle cx="16.5" cy="20" r="1.6"/><path d="M9.5 11h.01M14.5 11h.01M9.5 14.5c1.4 1 3.6 1 5 0"/></svg>Waze</a><a class="btn sec small" href="${gm}" target="_blank" rel="noopener" data-nav="maps"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Google Maps</a></div></div>`;
+}
+document.addEventListener("click",e=>{const a=e.target.closest("a[data-nav]");if(a)track("navegar",{app:a.dataset.nav})});
 function renderDetail(id){
   S.detail=id;const p=allPostos()[id];if(!p){$("#detail").hidden=true;return}
   const st=stats(id),r=reputacao(st),res=resumoIA[id]||resumoSimples(st.its);
@@ -806,6 +818,7 @@ function renderDetail(id){
   $("#detail").hidden=false;
   $("#detail").innerHTML=`<div class="row between"><h2>${esc(p.nome)}</h2><button class="btn ghost small" id="detClose">Fechar</button></div>
     <p class="note">${esc([p.bandeira,local(p),p.endereco].filter(Boolean).join(" · "))}</p>
+    ${navHtml(id,p)}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="summary" id="detSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="detIA">Resumir comentários com IA</button>':""}</div>
     ${Object.keys(st.precos).length?`<h3>Último preço relatado</h3><div class="prices">${Object.entries(st.precos).map(([c,v])=>`<div class="metric"><div class="k">${esc(c)}</div><div class="v">${brl(v.preco)}</div><div class="note">${fdata(v.data)}</div></div>`).join("")}</div>`:""}
@@ -883,6 +896,7 @@ function abrirPosto(id){
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       ${st.n?`<div class="summary" id="shSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="shIA" type="button">Resumir comentários com IA</button>':""}`:`<p class="note" style="color:inherit">${r.txt}</p>`}</div>
     <div class="row"><button class="btn" id="shAbast">Abastecer aqui</button><button class="btn ghost" id="shDet">Todas as avaliações</button></div>
+    ${navHtml(id,p)}
     <div><button class="btn ghost small" id="shSim">Simular chegada (teste do GPS)</button></div>`;
   $("#sheet").hidden=false;
   $("#shClose").onclick=fecharSheet;

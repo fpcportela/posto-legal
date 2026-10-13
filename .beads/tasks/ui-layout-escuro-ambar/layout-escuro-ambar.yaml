@@ -10,3 +10,5 @@ entries:
       - "web"
   - at: "2026-10-13T16:58:32Z"
     note: "Garagem: formulário de veículo escondido atrás do botão Adicionar veículo; publicado na main a pedido do usuário"
+  - at: "2026-10-13T17:11:56Z"
+    note: "Botões Waze e Google Maps no painel do posto (mapa) e no detalhe (Postos); publicado na main a pedido do usuário"
