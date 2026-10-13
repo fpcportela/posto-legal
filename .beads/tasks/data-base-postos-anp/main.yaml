@@ -12,3 +12,5 @@ created_at: "2026-10-08T15:56:27Z"
 entries:
   - at: "2026-10-08T15:56:27Z"
     status: "pending"
+  - at: "2026-10-13T20:38:49Z"
+    note: "Extrator dados/extrair-postos-anp.mjs: 45.762 postos da base ANP (out/2026) → dados/postos-anp.csv com nome (razão social; a base não tem nome fantasia), endereço completo, CNPJ, bandeira, município, UF e CEP (zero à esquerda restaurado em 2.706). CSVs fora do git. Falta geocodificar e importar no Supabase."
