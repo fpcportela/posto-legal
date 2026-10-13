@@ -10,7 +10,7 @@ App para motoristas registrarem abastecimentos, acompanharem a média de km/l e 
 O protótipo tem todo o fluxo. O mapa e o GPS funcionam no navegador (melhor abrindo o arquivo direto, já que a página publicada bloqueia a localização e as imagens do mapa).
 
 ### Mapa (aba Mapa)
-- Mapa Leaflet com fundo CARTO/OpenStreetMap. Cada posto com localização vira um marcador com a nota (★) e o preço do combustível escolhido.
+- Mapa Leaflet com fundo do OpenStreetMap (tiles padrão escurecidos por filtro CSS; o CARTO passou a exigir chave em 2026). Cada posto com localização vira um marcador com a nota (★) e o preço do combustível escolhido.
 - Veículo e combustível no topo: o combustível começa pelo "combustível usual" do veículo e pode ser trocado. Opção "só postos com preço deste combustível".
 - Cor do marcador segue os limites de "Alertas de reputação" da Garagem: verde (ótimo), amarelo (regular ou poucas avaliações), vermelho (péssimo), cinza (sem nota).
 - Tocar no posto abre um painel com nota, preço do combustível do veículo, rendimento relatado com esse combustível, resumo de elogios e reclamações, e os botões "Abastecer aqui" e "Todas as avaliações".

@@ -210,6 +210,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .leaflet-control-attribution a{color:var(--brand)!important}
 .leaflet-bar a{background:var(--surface)!important;color:var(--ink)!important;border-color:var(--line)!important}
 .pl-icon{background:none;border:0}
+.tiles-escuro{filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.5)}
 .pin{position:absolute;left:0;top:0;transform:translate(-50%,calc(-100% - 7px));background:var(--surface);border:2px solid var(--c);border-radius:9px;padding:2px 7px;font-family:var(--f-mono);font-size:.76rem;line-height:1.2;text-align:center;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5);color:var(--ink);cursor:pointer}
 .pin::after{content:"";position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);border:6px solid transparent;border-top:7px solid var(--c)}
 .pin .pv{display:block;font-weight:700;color:var(--c)}
@@ -529,7 +530,7 @@ const SUPABASE_URL="",SUPABASE_KEY="";
 const COMBS=["Gasolina comum","Gasolina aditivada","Gasolina premium","Etanol","Diesel S10","Diesel S500","GNV"];
 const RATE_TXT=["","Não gostei","Ruim","Regular","Bom","Gostei muito"];
 const CFG_PADRAO={baixo:2.5,alto:4.2,min:2};
-const S={uid:null,mode:"local",postos:{},pub:{},susp:{},suspPend:null,mine:[],gar:{veiculos:[],config:{...CFG_PADRAO}},demo:false,sel:null,stars:0,names:{},pubNome:{},conta:null,contaOk:false,usuarios:[],isOwner:false};
+const S={uid:null,mode:"local",postos:{},anp:{},pub:{},susp:{},suspPend:null,mine:[],gar:{veiculos:[],config:{...CFG_PADRAO}},demo:false,sel:null,stars:0,names:{},pubNome:{},conta:null,contaOk:false,usuarios:[],isOwner:false};
 let db=null,user=null,sample=null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -569,12 +570,50 @@ function buscaCidades(q,uf){
   return cidades().filter(c=>(!uf||c.uf===uf)&&c.k.includes(q))
     .sort((a,b)=>(b.k.startsWith(q)-a.k.startsWith(q))||a.k.localeCompare(b.k)).slice(0,40);
 }
-function allPostos(){return S.demo?{...DEMO_POSTOS,...S.postos}:S.postos}
+/* Postos do cadastro da ANP (prototipo/anp/<UF>.json, gerados por dados/gerar-anp-site.mjs):
+   baixados por UF conforme o mapa, a localização e os postos já usados. id = anp-<UF>-<CNPJ>. */
+const ANP={idx:null,uf:{},ver:0};
+function anpIndice(){if(!ANP.idx)ANP.idx=fetch("anp/index.json").then(r=>r.ok?r.json():null).catch(()=>null);return ANP.idx}
+let CID_ACENTO=null; // "SP|sao paulo" → "São Paulo" (a ANP grava sem acento)
+const cidadeNome=(uf,c)=>{if(!CID_ACENTO){CID_ACENTO=new Map();for(const x of cidades())CID_ACENTO.set(x.uf+"|"+x.k,x.n)}return CID_ACENTO.get(uf+"|"+norm(c))||c};
+async function carregarAnpUF(ufs){
+  const idx=await anpIndice();if(!idx)return;
+  const novos=ufs.filter(u=>idx.ufs[u]&&!ANP.uf[u]);if(!novos.length)return;
+  novos.forEach(u=>ANP.uf[u]="carregando");
+  await Promise.all(novos.map(async u=>{try{
+    const r=await fetch(`anp/${u}.json`);if(!r.ok)throw new Error(r.status);
+    for(const [cnpj,nome,bandeira,cid,endereco,lat,lng,nomeOsm,aprox] of await r.json()){const cidade=cidadeNome(u,cid);
+      S.anp[`anp-${u}-${cnpj}`]={nome,bandeira,cidade,uf:u,endereco,lat,lng,anp:true,cnpj,nomeOsm,aprox:!!aprox,k:norm([nome,bandeira,cidade,u,nomeOsm].join(" "))}}
+    ANP.uf[u]="ok"}catch(e){ANP.uf[u]="erro"}}));
+  ANP.ver++;clearTimeout(ANP.t);ANP.t=setTimeout(renderAll,30);
+}
+const ufDoId=id=>(/^anp-([A-Z]{2})-/.exec(id||"")||[])[1];
+async function anpPerto(){
+  const idx=await anpIndice();if(!idx)return;const ufs=new Set(),m=.3;
+  const noPonto=([la,ln])=>Object.entries(idx.ufs).forEach(([u,i])=>{if(i.bbox&&la>=i.bbox[0]-m&&la<=i.bbox[2]+m&&ln>=i.bbox[1]-m&&ln<=i.bbox[3]+m)ufs.add(u)});
+  if(M.me)noPonto(M.me);
+  if(map&&!$("#v-mapa").hidden&&map.getZoom()>=9){const b=map.getBounds();Object.entries(idx.ufs).forEach(([u,i])=>{if(i.bbox&&b.intersects(L.latLngBounds([i.bbox[0],i.bbox[1]],[i.bbox[2],i.bbox[3]])))ufs.add(u)})}
+  for(const a of S.mine){const u=ufDoId(a.postoId);if(u)ufs.add(u)}
+  for(const l of Object.values(S.pub))for(const i of l){const u=ufDoId(i.postoId);if(u)ufs.add(u)}
+  carregarAnpUF([...ufs]);
+}
+// Rede + ANP num objeto só, refeito só quando algo muda (a ANP pode ter dezenas de milhares de postos).
+// Posto da ANP que já está na rede (mesmo CNPJ) aparece só uma vez, com o id da rede.
+let ALL={k:null,v:null};
+function allPostos(){
+  const k=[ANP.ver,S.demo,Object.keys(S.postos).length].join("|");
+  if(ALL.k!==k||ALL.src!==S.postos){const naRede=new Set(Object.values(S.postos).map(p=>p.cnpj).filter(Boolean)),v={};
+    for(const [id,p] of Object.entries(S.anp))if(!naRede.has(p.cnpj))v[id]=p;
+    ALL={k,src:S.postos,v:Object.assign(v,S.postos)}}
+  return S.demo?{...DEMO_POSTOS,...ALL.v}:ALL.v;
+}
+// postos com alguma informação da rede (avaliação, preço, abastecimento meu, suspeita)
+function postosComDados(){const s=new Set(Object.keys(S.susp||{}));for(const i of allItems())s.add(i.postoId);for(const a of S.mine)s.add(a.postoId);return s}
 // O posto da rede guarda o nome cadastrado (na base da ANP, a razão social). Cada usuário pode dar
 // o seu próprio nome a ele (nome fantasia), guardado só na garagem dele: S.gar.apelidos[postoId].
 const apelido=id=>((S.gar&&S.gar.apelidos)||{})[id]||"";
 const nomeP=(id,p)=>apelido(id)||(p&&p.nome)||"";
-const subP=(id,p)=>[apelido(id)?"Razão social: "+p.nome:"",p.bandeira,local(p),p.endereco].filter(Boolean).join(" · ");
+const subP=(id,p)=>[apelido(id)?"Razão social: "+p.nome:"",p.bandeira,local(p),p.endereco,p.aprox?"local aproximado":""].filter(Boolean).join(" · ");
 const renBtn=id=>`<button class="btn ghost small" type="button" data-ren="${id}">Renomear</button>`;
 // Suspeitas de fraude relatadas pelos motoristas (rede): S.susp[postoId] = [{id,uid,nome,categoria,motivo,data}]
 const ICO_ATENCAO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>';
@@ -676,7 +715,7 @@ async function carregarPerfil(uid){const {data,error}=await sb.from("profiles").
 async function carregarRede(){
   const [p,a]=await Promise.all([sb.from("postos").select("*"),sb.from("avaliacoes").select("*").order("data").limit(10000)]);
   if(p.error)throw p.error;if(a.error)throw a.error;
-  S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
+  S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,cnpj:r.cnpj||undefined,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
   // suspeitas: se a tabela ainda não existe (schema.sql não rodado de novo), o app segue sem elas
   const sp=await sb.from("suspeitas").select("*").order("criado_em").limit(10000);S.susp={};
   if(sp.error)console.warn("suspeitas:",sp.error.message);
@@ -750,6 +789,15 @@ async function renomearPosto(id,nome){
   const ap={...(S.gar.apelidos||{})};if(nome)ap[id]=nome;else delete ap[id];
   S.gar={...S.gar,apelidos:ap};await saveGar();track("posto_renomeado",{apagou:!nome});
 }
+async function materializarAnp(id){
+  const p=S.anp[id];
+  let {data,error}=await sb.from("postos").select("id").eq("cnpj",p.cnpj).maybeSingle();if(error)throw error;
+  if(!data)({data,error}=await sb.from("postos").insert({nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat,lng:p.lng,cnpj:p.cnpj}).select("id").single());
+  if(error)throw error;
+  S.postos[data.id]={nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat,lng:p.lng,cnpj:p.cnpj,criadoPor:S.uid};
+  const ap=S.gar.apelidos||{};if(ap[id]){S.gar={...S.gar,apelidos:{...ap,[data.id]:ap[id]}};await saveGar()}
+  return data.id;
+}
 async function saveSuspeita(s){
   const item={...s,uid:S.uid,nome:primeiroNome()};
   if(sb){const {data,error}=await sb.from("suspeitas").insert({posto_id:s.postoId,abastecimento_id:s.abastId,categoria:s.categoria,motivo:s.motivo,nome:item.nome}).select("id").single();if(error)throw error;item.id=data.id}
@@ -794,12 +842,17 @@ async function loadNames(){
 
 /* ---------- ABASTECER ---------- */
 function renderPostoList(){
-  const q=$("#busca").value.trim().toLowerCase(),P=allPostos();
-  const ids=Object.keys(P).filter(id=>!q||[P[id].nome,apelido(id),P[id].bandeira,local(P[id])].join(" ").toLowerCase().includes(q));
-  ids.sort((a,b)=>nomeP(a,P[a]).localeCompare(nomeP(b,P[b])));
-  $("#postoList").innerHTML=ids.length?ids.map(id=>{const st=stats(id),p=P[id];
-    return `<button class="posto" data-id="${id}"><span class="n">${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} (${st.n})</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
-    :`<div class="empty"><span>${Object.keys(P).length?"Nenhum posto encontrado.":"Nenhum posto cadastrado na rede ainda."}</span><span class="note">Cadastre o posto em que você está para registrar o abastecimento.</span></div>`;
+  // Sem busca: postos da rede/com dados + os 25 da ANP mais próximos (até 15 km). Com busca: todos, até 60.
+  const q=norm($("#busca").value),P=allPostos(),dados=postosComDados(),ref=M.me||(map?[map.getCenter().lat,map.getCenter().lng]:null);
+  let ids=Object.keys(P).filter(id=>q?((P[id].k||norm([P[id].nome,P[id].bandeira,local(P[id])].join(" ")))+" "+norm(apelido(id))).includes(q):(!P[id].anp||dados.has(id)));
+  if(!q&&ref)ids=ids.concat(Object.keys(P).filter(id=>P[id].anp&&!dados.has(id)&&P[id].lat!=null).map(id=>[id,distM(ref,[P[id].lat,P[id].lng])]).filter(x=>x[1]<15000).sort((a,b)=>a[1]-b[1]).slice(0,25).map(x=>x[0]));
+  const dist={};if(ref)for(const id of ids){const k=coords(id,P[id]);dist[id]=k?distM(ref,k):Infinity}
+  ids.sort((a,b)=>(ref?dist[a]-dist[b]:0)||nomeP(a,P[a]).localeCompare(nomeP(b,P[b])));
+  const total=ids.length;ids=ids.slice(0,60);
+  $("#postoList").innerHTML=ids.length?ids.map(id=>{const st=stats(id),p=P[id],d=dist[id];
+    return `<button class="posto" data-id="${id}"><span class="n">${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}${d<Infinity?" · "+fmtDist(d):""}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} (${st.n})</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
+    :`<div class="empty"><span>${Object.keys(P).length?"Nenhum posto encontrado.":"Nenhum posto cadastrado na rede ainda."}</span><span class="note">${Object.keys(S.anp).length?"":"Ative a localização ou busque pelo nome da cidade para ver os postos do cadastro da ANP. "}Se não achar, cadastre o posto em que você está.</span></div>`;
+  if(total>ids.length)$("#postoList").insertAdjacentHTML("beforeend",`<p class="note">Mostrando ${ids.length} de ${total}. Digite mais para refinar a busca.</p>`);
 }
 function selectPosto(id){
   if(S.sel!==id){S.suspPend=null;pintaSuspPend()} // a suspeita marcada vale só para o posto em que foi marcada
@@ -867,8 +920,8 @@ function updateCalc(){
 
 /* ---------- REDE ---------- */
 function renderRede(){
-  const P=allPostos(),ordem=$("#ordem").value;
-  const list=Object.keys(P).map(id=>({id,p:P[id],st:stats(id)}));
+  const P=allPostos(),ordem=$("#ordem").value,dados=postosComDados();
+  const list=Object.keys(P).filter(id=>!P[id].anp||dados.has(id)).map(id=>({id,p:P[id],st:stats(id)}));
   list.sort((a,b)=>ordem==="aval"?b.st.n-a.st.n:ordem==="pior"?(a.st.media??9)-(b.st.media??9):(b.st.media??-1)-(a.st.media??-1));
   const real=Object.keys(S.postos).length;
   $("#demoBox").innerHTML=!real||S.demo?`<div class="demo"><span>${S.demo?"Mostrando postos e avaliações <b>de exemplo</b> para você ver como a rede funciona. Eles não são gravados.":"A rede ainda não tem postos. Quer ver um exemplo de como ela fica com avaliações?"}</span><button class="btn ghost small" id="demoT">${S.demo?"Esconder exemplo":"Ver exemplo"}</button></div>`:"";
@@ -937,8 +990,10 @@ function fillMapSel(){
 function initMap(){
   const t=document.documentElement.dataset.theme,dark=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);
   map=L.map("map").setView(M.me||M.base||CENTRO_PADRAO,14);
-  L.tileLayer(`https://{s}.basemaps.cartocdn.com/${"dark_all"}/{z}/{x}/{y}{r}.png`,{maxZoom:19,subdomains:"abcd",attribution:"© OpenStreetMap · © CARTO"}).addTo(map);
-  mkLayer=L.layerGroup().addTo(map);
+  // fundo: tiles do OpenStreetMap (o CARTO passou a exigir chave), escurecidos por filtro CSS
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"tiles-escuro",attribution:"© OpenStreetMap"}).addTo(map);
+  mkLayer=L.layerGroup().addTo(map);M.canvas=L.canvas({padding:.3});
+  map.on("moveend",()=>{anpPerto();renderMapa()});
   map.on("click",e=>abrirPontoVazio(e.latlng));
   if(M.me)desenharEu();
 }
@@ -947,18 +1002,23 @@ function renderMapa(){
   if(!window.L){$("#mapMsg").textContent="Não foi possível carregar o mapa. Verifique a conexão com a internet.";return}
   if($("#v-mapa").hidden&&!map)return;
   if(!map)initMap();
-  const P=allPostos(),comb=combMapa(),c=S.gar.config||CFG_PADRAO;let semLoc=0,n=0;
+  const P=allPostos(),comb=combMapa(),c=S.gar.config||CFG_PADRAO,dados=postosComDados(),zoom=map.getZoom(),vis=map.getBounds().pad(.2);let semLoc=0,n=0,leves=0,anpFora=0;
   mkLayer.clearLayers();
   for(const [id,p] of Object.entries(P)){
-    const k=coords(id,p);if(!k){semLoc++;continue}
+    // posto da ANP ainda sem nenhuma informação da rede: bolinha leve (canvas), só na área visível
+    if(p.anp&&!dados.has(id)&&M.alvo!==id){
+      if(p.lat==null||M.soComb)continue;
+      if(zoom<12||!vis.contains([p.lat,p.lng])){anpFora++;continue}
+      L.circleMarker([p.lat,p.lng],{renderer:M.canvas,radius:6,color:"#1a1003",weight:1.5,fillColor:"#b9a17a",fillOpacity:.95}).bindTooltip(()=>esc(nomeP(id,p))).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{anp:true});abrirPosto(id)}).addTo(mkLayer);leves++;continue}
+    const k=coords(id,p);if(!k){if(!p.anp)semLoc++;continue}
     const {st,r,pr}=infoPosto(id);
     if(M.soComb&&!pr)continue;n++;
     const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
     L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:nomeP(id,p),zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
   }
-  $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span>`;
-  $("#mapMsg").textContent=`${n} posto(s) no mapa, com preço de ${comb}.`+(semLoc?` ${semLoc} posto(s) sem localização não aparecem.`:"")+" Toque num ponto vazio do mapa para cadastrar um posto ali.";
-  const real=Object.values(S.postos).some(p=>p.lat!=null);
+  $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span><span><i style="--c:#b9a17a"></i>Cadastro da ANP, sem avaliação</span>`;
+  $("#mapMsg").textContent=`${n} posto(s) avaliado(s) no mapa, com preço de ${comb}.`+(leves?` ${leves} do cadastro da ANP ainda sem avaliação.`:"")+(anpFora&&zoom<12?" Aproxime o mapa para ver todos os postos do cadastro da ANP.":"")+(semLoc?` ${semLoc} posto(s) sem localização não aparecem.`:"")+" Toque num ponto vazio do mapa para cadastrar um posto ali.";
+  const real=Object.values(S.postos).some(p=>p.lat!=null)||Object.keys(S.anp).length>0;
   $("#mapDemo").innerHTML=!real||S.demo?`<div class="demo"><span>${S.demo?"Mostrando postos <b>de exemplo</b> perto de você. Eles não são gravados.":"Nenhum posto com localização ainda. Quer ver um exemplo no mapa?"}</span><button class="btn ghost small" id="mDemoT">${S.demo?"Esconder exemplo":"Ver exemplo"}</button></div>`:"";
   const dt=$("#mDemoT");if(dt)dt.onclick=()=>{S.demo=!S.demo;if(!S.demo&&allPostos()[M.alvo]==null)fecharSheet();renderAll()};
 }
@@ -1086,7 +1146,7 @@ function renderGaragem(){renderConta();renderAdmin();
   if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=c.baixo;$("#c-alto").value=c.alto;$("#c-min").value=c.min}
 }
 
-function renderAll(){renderPostoList();fillVeicSelect();renderRede();renderMapa();if(M.alvo&&!$("#sheet").hidden&&allPostos()[M.alvo])abrirPosto(M.alvo);renderHist();renderGaragem();if((S.gar.config||{}).gps&&M.watch==null&&!M.gpsErro)startGps(false);if(S.sel)renderAlert();if(S.detail&&!$("#detail").hidden)renderDetail(S.detail);updateCalc();renderPainel()}
+function renderAll(){renderPostoList();fillVeicSelect();renderRede();renderMapa();if(M.alvo&&!$("#sheet").hidden&&allPostos()[M.alvo])abrirPosto(M.alvo);renderHist();renderGaragem();if((S.gar.config||{}).gps&&M.watch==null&&!M.gpsErro)startGps(false);if(S.sel)renderAlert();if(S.detail&&!$("#detail").hidden)renderDetail(S.detail);updateCalc();renderPainel();anpPerto()}
 
 /* ---------- eventos ---------- */
 function show(v){if(!contaConfirmada()&&v!=="cadastro"){S.pendTab=v;v="cadastro"}if(S.tela!==v){S.tela=v;track("tela",{v})}if(v==="conta"){renderConta();$("#contaBtn").setAttribute("aria-current","page")}else $("#contaBtn").removeAttribute("aria-current");document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-"+v);if(v!=="mapa")$("#sheet").hidden=true;else setTimeout(()=>{renderMapa();if(map)map.invalidateSize()},0);try{localStorage.setItem(LS+"-tab",v)}catch(e){}}
@@ -1112,7 +1172,7 @@ $("#pNovo").onclick=()=>show("abastecer");
 $("#pRank").onclick=()=>show("rede");
 $("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b)show(b.dataset.go)};
 
-$("#busca").oninput=renderPostoList;
+$("#busca").oninput=()=>{const q=$("#busca").value.trim();if(q.length>=3)carregarAnpUF([...new Set(buscaCidades(q).slice(0,5).map(c=>c.uf))]);renderPostoList()};
 $("#postoList").onclick=e=>{const b=e.target.closest(".posto");if(b)selectPosto(b.dataset.id)};
 function abrirNovoPosto(loc,txt,origem){
   const f=$("#novoPosto");f.hidden=false;f.dataset.origem=origem||"";
@@ -1289,6 +1349,7 @@ $("#abForm").onsubmit=async e=>{
   if(c.last&&c.km<=c.last.km){toast(`A quilometragem deve ser maior que ${c.last.km.toLocaleString("pt-BR")} km`);return}
   if(!c.litros||!c.preco||!c.total){toast("Preencha dois entre valor do litro, litros e total pago");return}
   if(c.last&&!S.stars){toast(`Dê uma nota de 1 a 5 estrelas para ${c.last.postoNome}`);$("#rateCard").scrollIntoView({block:"center"});return}
+  if(sb&&S.anp[S.sel]&&String(S.sel).startsWith("anp-")){try{const uid=await materializarAnp(S.sel);M.soneca[uid]=M.soneca[S.sel];S.sel=uid}catch(err){toast("Não foi possível registrar o posto: "+(err.message||err.code));return}}
   const v=S.gar.veiculos.find(x=>x.id===c.vid),now=new Date().toISOString(),id="ab-"+Date.now();
   const comb=$("#comb").value,obs=$("#obs").value.trim();
   const a={id,veiculoId:c.vid,postoId:S.sel,postoNome:nomeP(S.sel,p),km:c.km,comb,preco:c.preco,total:c.total,litros:Math.round(c.litros*1000)/1000,cheio:c.cheio,data:now};
@@ -1348,7 +1409,7 @@ $("#suspCancel").onclick=fecharSuspeita;$("#suspAsk").onclick=e=>{if(e.target.id
 $("#suspForm").onsubmit=e=>{e.preventDefault();const motivo=$("#susp-motivo").value.replace(/\s+/g," ").trim();
   if(motivo.length<10){toast("Descreva o motivo (pelo menos 10 caracteres)");$("#susp-motivo").focus();return}
   S.suspPend={categoria:$("#susp-cat").value,motivo};fecharSuspeita();pintaSuspPend();toast("Suspeita marcada. Ela será registrada ao salvar o abastecimento.")};
-function abrirRenomear(id){const p=allPostos()[id];if(!p)return;S.ren=id;$("#renRazao").textContent="Razão social: "+p.nome;$("#ren-nome").value=apelido(id);$("#renAsk").hidden=false;$("#ren-nome").focus()}
+function abrirRenomear(id){const p=allPostos()[id];if(!p)return;S.ren=id;$("#renRazao").textContent="Razão social: "+p.nome;$("#ren-nome").value=apelido(id);$("#ren-nome").placeholder=p.nomeOsm?"Ex.: "+p.nomeOsm:"Ex.: Posto Camila";$("#renAsk").hidden=false;$("#ren-nome").focus()}
 function fecharRenomear(){$("#renAsk").hidden=true;S.ren=null}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-ren]");if(b){e.stopPropagation();abrirRenomear(b.dataset.ren)}});
 $("#renCancel").onclick=fecharRenomear;

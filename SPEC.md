@@ -37,7 +37,7 @@ Nas próximas semanas o trabalho segue **em paralelo**: amadurecer a versão web
 
 ## 2. Arquitetura
 
-- **Frontend web:** `prototipo/index.html` — HTML/CSS/JS sem build, Leaflet 1.9.4 (cdnjs) com fundo CARTO/OpenStreetMap, busca de endereço pelo Photon (OSM). O `index.html` da raiz só redireciona para `prototipo/`. Roda em modo local (localStorage) quando `SUPABASE_URL`/`SUPABASE_KEY` estão vazios.
+- **Frontend web:** `prototipo/index.html` — HTML/CSS/JS sem build, Leaflet 1.9.4 (cdnjs) com fundo do OpenStreetMap (tile.openstreetmap.org, escurecido por CSS), busca de endereço pelo Photon (OSM). O `index.html` da raiz só redireciona para `prototipo/`. Roda em modo local (localStorage) quando `SUPABASE_URL`/`SUPABASE_KEY` estão vazios.
 - **Regras de negócio:** serão extraídas para um módulo JS puro (ex.: `prototipo/regras.js`) importado pelo protótipo e pelos testes — e, depois, pelo app Expo. Ver §4.
 - **App nativo (a começar):** React Native com Expo, numa pasta própria deste repo (ex.: `app/`). `expo-location` + `expo-task-manager` (geofence) e `expo-notifications`.
 - **Backend:** Supabase — Postgres com RLS, Supabase Auth (e-mail + senha; CPF convertido em e-mail por `email_do_login`). Edge Functions para o que exigir servidor (código do WhatsApp).
@@ -96,7 +96,7 @@ Não há API própria: o cliente fala direto com o Supabase (PostgREST + Auth) s
   - Aceite LGPD registrado (`profiles.lgpd_em`) antes de qualquer dado pessoal ser gravado.
   - O usuário pode excluir a própria conta e os dados dela.
   - CPF exibido sempre mascarado fora do formulário de edição.
-- **Custo zero no início:** só serviços com plano gratuito até validar com o grupo de teste (Supabase free, GitHub Pages/Actions, Photon, Leaflet/CARTO, dados abertos da ANP). Qualquer serviço pago (Google Places, SMS, hospedagem paga) precisa de decisão humana antes. A Cloud API do WhatsApp cobra por conversa de autenticação: registrar a estimativa antes de ligar.
+- **Custo zero no início:** só serviços com plano gratuito até validar com o grupo de teste (Supabase free, GitHub Pages/Actions, Photon, Leaflet/tiles do OSM, dados abertos da ANP e do IBGE). Qualquer serviço pago (Google Places, SMS, hospedagem paga) precisa de decisão humana antes. A Cloud API do WhatsApp cobra por conversa de autenticação: registrar a estimativa antes de ligar.
 - **Segurança:**
   - Chave do Supabase no cliente é só a `anon`; a `service_role` nunca entra no repositório nem no front.
   - Segredos (Meta, service_role) ficam nos secrets do Supabase/GitHub.

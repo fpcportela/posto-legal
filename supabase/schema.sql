@@ -76,6 +76,11 @@ create table if not exists public.postos (
   criado_em timestamptz not null default now()
 );
 
+-- Postos do cadastro da ANP ficam em arquivos do site (prototipo/anp/) e só entram aqui no
+-- primeiro abastecimento; o CNPJ evita duplicar o mesmo posto.
+alter table public.postos add column if not exists cnpj text;
+create unique index if not exists postos_cnpj on public.postos(cnpj) where cnpj is not null;
+
 -- ---------- garagem (veículos e configuração dos alertas) ----------
 create table if not exists public.garagem (
   user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
