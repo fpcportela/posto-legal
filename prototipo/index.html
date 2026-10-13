@@ -458,7 +458,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
   <!-- HISTÓRICO -->
   <section class="view" id="v-historico" hidden>
-    <div class="row between"><h2>Meus abastecimentos</h2><select id="hVeic" style="width:auto"></select></div>
+    <div class="row between"><h2>Meus abastecimentos</h2><div class="row"><select id="hVeic" style="width:auto" aria-label="Veículo"></select><select id="hPer" style="width:auto" aria-label="Período"><option value="">Todo o período</option><option value="1">Último mês</option><option value="3">Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="datas">Definir datas</option></select></div></div>
+    <div class="two" id="hDatas" hidden><label>De<input type="date" id="hDe"></label><label>Até<input type="date" id="hAte"></label></div>
     <div class="kpis" id="hKpis"></div>
     <div class="hist" id="hist"></div>
   </section>
@@ -1062,13 +1063,18 @@ function consumoPorAbast(){
 function renderHist(){
   const v=S.gar.veiculos||[],sel=$("#hVeic"),cur=sel.value;
   sel.innerHTML='<option value="">Todos os veículos</option>'+v.map(x=>`<option value="${x.id}">${esc(x.modelo)}</option>`).join("");sel.value=v.some(x=>x.id===cur)?cur:"";
-  const list=S.mine.filter(a=>!sel.value||a.veiculoId===sel.value).sort((a,b)=>b.data.localeCompare(a.data));
+  // período: último 1/3/6 meses ou datas escolhidas (de/até, inclusive)
+  const per=$("#hPer").value;let ini=null,fim=null;$("#hDatas").hidden=per!=="datas";
+  if(per==="datas"){if($("#hDe").value)ini=new Date($("#hDe").value+"T00:00:00");if($("#hAte").value)fim=new Date($("#hAte").value+"T23:59:59.999")}
+  else if(per){ini=new Date();ini.setMonth(ini.getMonth()-Number(per))}
+  const list=S.mine.filter(a=>(!sel.value||a.veiculoId===sel.value)&&(!ini||new Date(a.data)>=ini)&&(!fim||new Date(a.data)<=fim)).sort((a,b)=>b.data.localeCompare(a.data));
   const gasto=list.reduce((s,a)=>s+(a.total||0),0),meds=list.filter(a=>a.media);
   const mediaG=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   $("#hKpis").innerHTML=`<div class="metric"><div class="k">Abastecimentos</div><div class="v">${list.length}</div></div><div class="metric"><div class="k">Total gasto</div><div class="v">${brl(gasto)}</div></div><div class="metric hl"><div class="k">Média geral</div><div class="v">${mediaG?num(mediaG)+" km/l":"—"}</div></div>`;
   const {rod,med}=consumoPorAbast();
   $("#hist").innerHTML=list.length?list.map(a=>{const vv=v.find(x=>x.id===a.veiculoId);
     return `<div class="ab"><div><b>${esc(a.postoNome)}</b>${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
+    :S.mine.length?'<div class="empty card"><span>Nenhum abastecimento neste período.</span><span class="note">Escolha outro período ou outro veículo.</span></div>'
     :'<div class="empty card"><span>Nenhum abastecimento registrado.</span><span class="note">Use a aba Abastecer quando parar no posto.</span></div>';
 }
 
@@ -1322,7 +1328,7 @@ $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config
   if(on){startGps(false);toast("Aviso por GPS ligado")}else{if(M.watch!=null)navigator.geolocation.clearWatch(M.watch);M.watch=null;toast("Aviso por GPS desligado")}};
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#suspVer").hidden)$("#suspVer").hidden=true;else if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
-$("#hVeic").onchange=renderHist;
+$("#hVeic").onchange=renderHist;$("#hPer").onchange=renderHist;$("#hDe").onchange=renderHist;$("#hAte").onchange=renderHist;
 /* suspeita de fraude: marcada no abastecimento, registrada no posto atual ao salvar */
 function relatosHtml(id){return [...susp(id)].sort((a,b)=>(b.data||"").localeCompare(a.data||"")).map(x=>`<div class="relato"><strong>${esc(x.categoria)}</strong><div>${esc(x.motivo)}</div><div class="note">${esc(x.uid===S.uid?"Você":(x.nome||"Motorista"))} · ${fdata(x.data)}</div></div>`).join("")}
 function verSuspeitas(id){const p=allPostos()[id];if(!p)return;
