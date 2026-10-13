@@ -98,7 +98,7 @@ create table if not exists public.abastecimentos (
   litros numeric,
   cheio boolean,
   media numeric,
-  estrelas smallint,
+  estrelas numeric(2,1),
   obs text,
   km_l numeric,
   avaliado_em timestamptz,
@@ -116,12 +116,20 @@ create table if not exists public.avaliacoes (
   preco numeric,
   modelo text,
   km_l numeric,
-  estrelas smallint check (estrelas between 1 and 5),
+  estrelas numeric(2,1),
   obs text,
   avaliado_em timestamptz,
   data timestamptz not null default now()
 );
 create index if not exists avaliacoes_posto on public.avaliacoes(posto_id);
+
+-- Nota de 1 a 5 em meias estrelas (3,5; 4,5). Bancos criados antes guardavam inteiro (smallint):
+-- converte a coluna e troca a regra. Pode rodar de novo.
+alter table public.abastecimentos alter column estrelas type numeric(2,1);
+alter table public.avaliacoes drop constraint if exists avaliacoes_estrelas_check;
+alter table public.avaliacoes alter column estrelas type numeric(2,1);
+alter table public.avaliacoes add constraint avaliacoes_estrelas_check
+  check (estrelas between 1 and 5 and estrelas * 2 = trunc(estrelas * 2));
 
 -- ---------- eventos de uso ----------
 create table if not exists public.eventos (

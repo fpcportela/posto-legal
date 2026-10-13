@@ -125,7 +125,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .score{font-family:var(--f-mono);font-size:.88rem}
 .rate{display:flex;gap:6px}
 .rate button{flex:1;background:var(--sunk);border:1px solid var(--line2);border-radius:12px;font-size:1.7rem;line-height:1;padding:11px 0;color:var(--star-off);cursor:pointer}
-.rate button.on{color:var(--star);border-color:var(--star);background:var(--brand-soft)}
+.rate button.on,.rate button.half{color:var(--star);border-color:var(--star);background:var(--brand-soft)}
+.rate button.half span{background:linear-gradient(90deg,var(--star) 50%,var(--star-off) 50%);-webkit-background-clip:text;background-clip:text;color:transparent}
 .ratelabel{font-weight:700;min-height:1.4em}
 /* alerta de reputação */
 .alert{border-radius:var(--r-sm);padding:14px 16px;display:grid;gap:8px;border:1px solid}
@@ -382,10 +383,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <div class="card" id="rateCard" hidden>
         <h3>Avalie o posto do abastecimento anterior</h3>
         <div><div class="chosen"><div class="n" id="rtNome" style="font-size:1.15rem"></div></div><div class="note" id="rtSub"></div></div>
-        <div class="rate" id="rate" role="group" aria-label="Nota de 1 a 5">
-          <button type="button" data-n="1" aria-label="1 estrela">★</button><button type="button" data-n="2" aria-label="2 estrelas">★</button><button type="button" data-n="3" aria-label="3 estrelas">★</button><button type="button" data-n="4" aria-label="4 estrelas">★</button><button type="button" data-n="5" aria-label="5 estrelas">★</button>
+        <div class="rate" id="rate" role="group" aria-label="Nota de 1 a 5, aceita meia estrela">
+          <button type="button" data-n="1" aria-label="1 estrela"><span>★</span></button><button type="button" data-n="2" aria-label="2 estrelas"><span>★</span></button><button type="button" data-n="3" aria-label="3 estrelas"><span>★</span></button><button type="button" data-n="4" aria-label="4 estrelas"><span>★</span></button><button type="button" data-n="5" aria-label="5 estrelas"><span>★</span></button>
         </div>
         <div class="ratelabel" id="rateLabel">Toque nas estrelas</div>
+        <p class="note">Para meia estrela (ex.: 3,5), toque na metade esquerda da estrela.</p>
         <label>Críticas, elogios ou sugestões<textarea id="obs" placeholder="Atendimento, limpeza, bomba aferida, preço, banheiro…"></textarea></label>
         <p class="note">Avalie pelo que você viveu lá e pelo rendimento do combustível. Sua nota e comentário ficam visíveis para todos os motoristas. Placa e quilometragem ficam só na sua conta.</p>
       </div>
@@ -635,7 +637,7 @@ function carregarScript(src){return new Promise((ok,falha)=>{const s=document.cr
 const perfilDe=r=>({nome:r.nome,cpf:r.cpf,email:r.email,whats:r.whats,status:r.status,lgpdEm:r.lgpd_em,criadoEm:r.criado_em,atualizadoEm:r.atualizado_em,confirmadoEm:r.confirmado_em,isAdmin:r.is_admin});
 const perfilLinha=c=>({id:S.uid,nome:c.nome,cpf:c.cpf,email:c.email,whats:c.whats,status:c.status,lgpd_em:c.lgpdEm||null,criado_em:c.criadoEm||undefined,confirmado_em:c.confirmadoEm||null});
 const abDe=r=>{const a={id:r.id,veiculoId:r.veiculo_id,postoId:r.posto_id,postoNome:r.posto_nome,km:Number(r.km),comb:r.comb,preco:nOuNulo(r.preco),total:nOuNulo(r.total),litros:nOuNulo(r.litros),cheio:!!r.cheio,data:r.data};
-  if(r.media!=null)a.media=Number(r.media);if(r.estrelas!=null)a.estrelas=r.estrelas;if(r.obs)a.obs=r.obs;if(r.km_l!=null)a.kmL=Number(r.km_l);if(r.avaliado_em)a.avaliadoEm=r.avaliado_em;return a};
+  if(r.media!=null)a.media=Number(r.media);if(r.estrelas!=null)a.estrelas=Number(r.estrelas);if(r.obs)a.obs=r.obs;if(r.km_l!=null)a.kmL=Number(r.km_l);if(r.avaliado_em)a.avaliadoEm=r.avaliado_em;return a};
 const abLinha=a=>({id:a.id,user_id:S.uid,veiculo_id:a.veiculoId,veiculo_modelo:((S.gar.veiculos||[]).find(v=>v.id===a.veiculoId)||{}).modelo||null,posto_id:a.postoId,posto_nome:a.postoNome,km:a.km,comb:a.comb,preco:a.preco,total:a.total,litros:a.litros,cheio:!!a.cheio,
   media:a.media??null,estrelas:a.estrelas||null,obs:a.obs||null,km_l:a.kmL??null,avaliado_em:a.avaliadoEm||null,data:a.data});
 async function carregarPerfil(uid){const {data,error}=await sb.from("profiles").select("*").eq("id",uid).maybeSingle();if(error)throw error;return data?perfilDe(data):null}
@@ -644,7 +646,7 @@ async function carregarRede(){
   if(p.error)throw p.error;if(a.error)throw a.error;
   S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
   S.pub={};S.pubNome={};
-  for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas||undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
+  for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas!=null?Number(r.estrelas):undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
 }
 async function carregarMeus(){
   const [g,ab]=await Promise.all([sb.from("garagem").select("dados").eq("user_id",S.uid).maybeSingle(),sb.from("abastecimentos").select("*").eq("user_id",S.uid)]);
@@ -1214,8 +1216,12 @@ function autoFill(changed){
 }
 document.querySelectorAll("input.money").forEach(el=>el.addEventListener("input",()=>{maskMoney(el);autoFill(el);updateCalc()}));
 ["#km","#cheio"].forEach(s=>$(s).addEventListener("input",updateCalc));
-$("#rate").onclick=e=>{const b=e.target.closest("button");if(!b)return;S.stars=+b.dataset.n;
-  document.querySelectorAll("#rate button").forEach(x=>{x.classList.toggle("on",+x.dataset.n<=S.stars);x.setAttribute("aria-pressed",+x.dataset.n===S.stars)});$("#rateLabel").textContent=`${S.stars} · ${RATE_TXT[S.stars]}`};
+// Nota de 1 a 5 em meias estrelas: metade esquerda da estrela = meia (3,5); direita = cheia (4).
+// Pelo teclado (sem posição do clique), apertar de novo a mesma estrela alterna cheia/meia.
+$("#rate").onclick=e=>{const b=e.target.closest("button");if(!b)return;const n=+b.dataset.n,r=b.getBoundingClientRect();
+  const meia=e.detail>0?e.clientX<r.left+r.width/2:S.stars===n;S.stars=Math.max(1,meia?n-.5:n);
+  document.querySelectorAll("#rate button").forEach(x=>{const k=+x.dataset.n;x.classList.toggle("on",k<=S.stars);x.classList.toggle("half",k-.5===S.stars);x.setAttribute("aria-pressed",k===Math.ceil(S.stars))});
+  $("#rateLabel").textContent=`${String(S.stars).replace(".",",")} · ${RATE_TXT[Math.round(S.stars)]}`};
 $("#abForm").onsubmit=async e=>{
   e.preventDefault();const c=calc(),p=allPostos()[S.sel];
   if(p&&p.demo){toast("Este é um posto de exemplo. Escolha ou cadastre um posto real.");return}
@@ -1243,7 +1249,7 @@ $("#abForm").onsubmit=async e=>{
   $("#saveAb").disabled=true;
   try{await saveAbast(a);if(prevAb)await saveAbast(prevAb);await savePub(items.slice(-400),[id,c.last&&c.last.id].filter(Boolean));
     track("abastecimento_salvo",{comb,media:a.media||null,avaliou:!!c.last,estrelas:c.last?S.stars:null,cheio:c.cheio});toast(c.media?`Salvo! Média de ${num(c.media)} km/l`:"Abastecimento salvo");
-    $("#abForm").reset();ultimoDigitado=null;$("#cheio").checked=false;S.stars=0;document.querySelectorAll("#rate button").forEach(x=>x.classList.remove("on"));$("#rateLabel").textContent="Toque nas estrelas";
+    $("#abForm").reset();ultimoDigitado=null;$("#cheio").checked=false;S.stars=0;document.querySelectorAll("#rate button").forEach(x=>x.classList.remove("on","half"));$("#rateLabel").textContent="Toque nas estrelas";
     $("#trocar").click();renderAll();show("historico");
   }catch(err){toast(err.code==="quota_exceeded"?"Armazenamento cheio.":"Não foi possível salvar: "+(err.message||err.code))}
   finally{$("#saveAb").disabled=false}
