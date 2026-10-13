@@ -1,0 +1,7 @@
+# Fixtures dos testes ficam em LF em qualquer checkout. Os testes montam o esperado
+# com .replace() de trechos multilinha ("status: pending\n    effort: M"), que não
+# casam em CRLF: num checkout novo no Windows (clone, git worktree add) o autocrlf
+# as gravava em CRLF e o beads-migrate.test.ts quebrava. A regra mora aqui, e não no
+# .gitattributes da raiz, porque os consumidores vendorizam estes testes e só o
+# aiteam/ viaja com o sync.
+* text eol=lf

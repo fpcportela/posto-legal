@@ -1,0 +1,5 @@
+# .beads/archive/index.yaml — gerado por archive-beads; não editar à mão
+- {archived: '2026-07-15', id: infra-arquivada-a, status: completed, effort: S, model: sonnet, tags: [beads], title: 'Primeira arquivada: com dois-pontos'}
+- {archived: '2026-08-02', id: spec-arquivada-b, status: completed, title: Segunda arquivada}
+- {archived: '2026-09-15', id: api-duplicada, status: completed, title: Versão arquivada da duplicada (mais velha)}
+- {archived: '2026-09-20', id: orch-so-no-indice, status: completed, title: Linha de índice sem nó no completed}

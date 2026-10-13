@@ -1,2 +1,16 @@
 .DS_Store
 prototipo/index.backup-*.html
+
+# Claude Code: worktrees dos subagentes (isolation: worktree) — rb-ai-team#38
+.claude/worktrees/
+
+# Trello MCP: prints dos cards baixados (telas internas e dados de cliente) — rb-ai-team#28
+.trello-cache/
+
+# superpowers: workspace de rascunho dos skills (SDD, executing-plans), nunca estado — rb-ai-team#51
+.superpowers/
+
+# Segredos: nunca versionar .env reais (o modelo .env.example continua liberado)
+.env
+.env.*
+!.env.example

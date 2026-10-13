@@ -1,0 +1,32 @@
+# Force LF on checkout for source + scripts, regardless of core.autocrlf.
+# Two concrete failures this prevents on a Windows checkout:
+#  - vite-node mis-parses a CRLF .mjs that carries a SHEBANG: its shebang strip
+#    leaves a stray CR behind → "SyntaxError: Invalid or unexpected token", so
+#    `npm test` fails on a fresh clone. (Isolated by experiment: the shebang is
+#    the trigger; non-ASCII/emoji in a CRLF module parse fine. An earlier
+#    revision of this comment blamed the emoji — it was wrong.) The belt is this
+#    eol=lf; the braces is keeping shebangs out of imported modules — see the
+#    hooks/session-brief.mjs ↔ src/session-brief-core.mjs split.
+#  - the bash git hooks under aiteam/githooks/ fail outright if CRLF reaches
+#    their shebang/commands.
+# Personas e seus bindings gerados: o sync compara conteúdo byte a byte para
+# detectar drift, então o checkout não pode reescrever as quebras de linha —
+# senão Windows e Linux discordam sobre um arquivo idêntico.
+aiteam/agents/*.md text eol=lf
+.claude/agents/*.md text eol=lf
+# SPEC.md: o frontmatter decide o break-glass allow_tier3, o budget_usd e o
+# infra_kb. Os leitores do framework já toleram CRLF (rb-ai-team#36); o LF é a
+# defesa em profundidade, para leitor nenhum do SPEC depender disso.
+SPEC.md text eol=lf
+# Mapa de tiers: o template que viaja com o vendor e a cópia da raiz do upstream
+# são iguais byte a byte (aiteam/src/tier-rules-template.test.ts), e o install
+# semeia o template como está — LF na cópia de trabalho para as duas.
+aiteam/templates/tier-rules.json text eol=lf
+.claude/tier-rules.json text eol=lf
+
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.js  text eol=lf
+*.ts  text eol=lf
+*.mts text eol=lf
+aiteam/githooks/* text eol=lf

@@ -1,0 +1,14 @@
+title: "Decisão: GitHub Pages publica a main sem gate"
+description: "Decidir se o Pages passa a publicar de outra branch (gh-pages) ou por workflow com disparo manual"
+effort: "S"
+impl_model: "sonnet"
+related_files:
+  - "SPEC.md"
+tags:
+  - "decisao"
+  - "deploy"
+  - "pages"
+created_at: "2026-10-08T15:56:44Z"
+entries:
+  - at: "2026-10-08T15:56:44Z"
+    status: "pending"

@@ -1,0 +1,41 @@
+{
+  "name": "rb-ai-team",
+  "version": "0.1.0",
+  "description": "Agent-First Development Framework — boilerplate for bootstrapping an AI Team into any project",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "eval": "vitest run evals/run.test.ts",
+    "typecheck": "tsc --noEmit",
+    "generate-spec": "npx tsx scripts/generate-spec.ts",
+    "validate:beads": "node scripts/beads-check.mjs --all",
+    "beads": "node scripts/beads.mjs",
+    "beads:views": "node scripts/beads-views.mjs",
+    "beads:migrate": "node scripts/migrate-beads.mjs",
+    "bootstrap-beads": "npx tsx scripts/bootstrap-beads.ts",
+    "metrics": "npx tsx scripts/metrics.ts",
+    "doctor": "node scripts/doctor.mjs",
+    "install:framework": "node install.mjs",
+    "sync:agents": "npx tsx scripts/sync-agents.ts",
+    "validate:agents": "npx tsx scripts/sync-agents.ts --check",
+    "infra:claim": "node scripts/infra-kb-claim.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ioredis": "^5.4.2",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/ioredis-mock": "^8.2.7",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "ioredis-mock": "^8.13.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

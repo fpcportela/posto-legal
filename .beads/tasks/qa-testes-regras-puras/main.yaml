@@ -1,0 +1,15 @@
+title: "Suíte de testes: extrair regras puras e rodar Vitest no CI"
+description: "Extrair média km/l, avaliação, CPF/WhatsApp, senha e cor do marcador para regras.js; Vitest + npm test em PR (ci.yml)"
+effort: "M"
+impl_model: "sonnet"
+related_files:
+  - "prototipo/index.html"
+  - ".github/workflows/ci.yml"
+tags:
+  - "tests"
+  - "regras"
+  - "ci"
+created_at: "2026-10-08T15:56:14Z"
+entries:
+  - at: "2026-10-08T15:56:14Z"
+    status: "pending"

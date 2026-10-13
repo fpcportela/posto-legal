@@ -1,0 +1,9 @@
+# rb-ai-team
+
+Read and obey AGENTS.md (repo root, imports aiteam/AGENTS.md) and the active
+persona under aiteam/agents/ before writing code. See
+aiteam/docs/provider-agnostic-improvements.md for the enforcement portability
+matrix: the runtime Tier-3 gate (aiteam/hooks/tier-guard.mjs, on Bash,
+PowerShell, Monitor and the app terminal) is Claude-Code-specific, but the git
+pre-push backstop (aiteam/githooks/pre-push) and the MCP tool tier gating
+(aiteam/mcp/registry.ts) apply to any client that uses them.

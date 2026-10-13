@@ -1,0 +1,15 @@
+title: "Web pronto para o grupo de teste"
+description: "Supabase em uso real, administrador e eventos de uso funcionando para o grupo fechado (dezenas de usuários)"
+effort: "M"
+impl_model: "sonnet"
+related_files:
+  - "prototipo/index.html"
+  - "supabase/schema.sql"
+tags:
+  - "web"
+  - "supabase"
+  - "eventos"
+created_at: "2026-10-08T15:56:17Z"
+entries:
+  - at: "2026-10-08T15:56:17Z"
+    status: "pending"

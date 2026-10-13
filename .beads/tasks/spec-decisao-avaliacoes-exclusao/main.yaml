@@ -1,0 +1,13 @@
+title: "Decisão: avaliações ao excluir a conta"
+description: "Apagar ou anonimizar as avaliações, que alimentam a nota pública do posto; bloqueia o fim da exclusão de conta"
+effort: "S"
+impl_model: "sonnet"
+related_files:
+  - "SPEC.md"
+tags:
+  - "decisao"
+  - "lgpd"
+created_at: "2026-10-08T15:56:49Z"
+entries:
+  - at: "2026-10-08T15:56:49Z"
+    status: "pending"

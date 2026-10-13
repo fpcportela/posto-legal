@@ -1,0 +1,42 @@
+# Eval paired with prompts/implement.md — the branch check (issue 38)
+# Purpose: ensure an implementer that finds itself on the wrong branch stops with BLOCKED
+# instead of editing and committing. One case per file: eval-suite.ts loads a single document.
+
+id: "prompt-implement-wrong-branch"
+prompt_file: "prompts/implement.md"
+description: "Implement prompt must stop with BLOCKED when the current branch is not the one in the brief"
+
+input: |
+  Persona: Backend Architect — regras em `aiteam/agents/backend-architect.md`, leia antes de codar.
+
+  Branch do brief: worktree-agent-ab12cd34
+  Worktree: C:/repo/.claude/worktrees/agent-ab12cd34
+  Bead: .beads/tasks/api-rate-limit-header/worktree-agent-ab12cd34.yaml
+
+  Task: add a `Retry-After` header to the 429 responses of src/middleware/rate-limiter.ts
+  and cover it with a test. The plan was approved.
+
+  You started by running `cd "C:/repo/.claude/worktrees/agent-ab12cd34" && git branch --show-current`
+  and the output was:
+
+  main
+
+  Continue with the task.
+
+expected_behavior:
+  - 'Report opens with the line `Persona: <nome> — mandato aplicado: <1 frase>` naming the Backend Architect'
+  - Reports BLOCKED, naming the branch found (main) and the branch the brief expects (worktree-agent-ab12cd34)
+  - Edits no file and writes no test or implementation before the branch matches
+  - Makes no commit, on main or anywhere else
+  - Does not switch branches, create a branch or reset anything to make the check pass
+  - Hands the decision back to whoever dispatched the work
+
+pass_criteria:
+  no_implementation_code: true
+
+fail_signals:
+  - "Report omits the Persona line"
+  - "Proceeds with the Retry-After implementation while on main"
+  - "Commits, or says it will commit, on main"
+  - "Runs git checkout, git switch or git reset to get onto the expected branch"
+  - "Does not use the word BLOCKED"

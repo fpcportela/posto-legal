@@ -1,0 +1,51 @@
+---
+name: trello-review
+description: "Use when the user asks to review Trello cards, run card intake, or process the \"<QUEUE NAME>\" queue — interactive card-by-card review: analyze description + prints, decide each card's fate with the user, write the decision back to Trello (comment + move), and create a beads task when a card becomes real work. Requires the trello-tools MCP connected (valid TRELLO_API_KEY/TOKEN in root .env)."
+---
+
+# /trello-review — Interactive intake of the <QUEUE NAME> queue
+
+<!--
+  TEMPLATE (aiteam/templates/trello-review-SKILL.md.example). Copy it to
+  .claude/skills/trello-review/SKILL.md, fill every <PLACEHOLDER>, delete this comment.
+  It stays thin on purpose: the procedure is the framework's and never gets copied here.
+-->
+
+**Read `aiteam/skills/trello-review/PROCEDURE.md` now and follow it.** It is the whole procedure —
+pre-flight, queue summary, the card loop and its four outcomes, the beads convention, wrap-up and
+failure rules — and it is synced with the framework (`aiteam/`). This file is only this project's
+configuration: the values that procedure calls "the project config". Do not paste the procedure here;
+a copy is what drifted in four repos (rb-ai-team#28).
+
+## Project config
+
+Lists of the board:
+
+| Role | List | id |
+|---|---|---|
+| Review queue | <QUEUE NAME> | `<LIST ID>` |
+| Parked task | <PARKED LIST NAME> | `<LIST ID>` |
+| Executing now | <EXECUTING LIST NAME> | `<LIST ID>` |
+| Answered / closed | <CLOSED LIST NAME> | `<LIST ID>` |
+
+Everything else the procedure reads:
+
+| Key | Value |
+|---|---|
+| Board | "<BOARD NAME>" `<BOARD ID>` |
+| Label | `<exact name of the project's label on the board, e.g. TEAM-X>` — or none, when the queue alone identifies the project's cards. The procedure puts it on every card it creates and on the queue cards that lack it. In the reconcile command the name is a regex: escape its metacharacters (`Team.X` becomes `Team\.X`), or the filter matches nothing and the check comes out green by accident |
+| Comment language | PT-BR (comments posted to Trello carry no agent marker; the user approves every text) |
+| Backlog name | `<the words that complete "no backlog …" in the Task comment, e.g. do TEAM-X>` |
+| Scope markers | `<title markers or labels that change the scope analysis, e.g. [SCOPE-A] = only one of the project's apps; or none>` |
+| Id convention | `<prefixes in use (ui- / api- / data- / spec- / infra- / orch-)>`, `<with or without a sequence number>` |
+| Shared-board guard | `<what else lives on this board that intake must not touch, e.g. the other queues' cards in the destination lists; or none>` |
+| Token app name | `<Project> Intake` (the `name=` of the Trello authorize URL) |
+| Reconcile command | `node aiteam/scripts/beads-trello-reconcile.mjs --board <BOARD ID> --queue <LIST ID> [--label '^<LABEL NAME, REGEX-ESCAPED>$'] [--ignore '<regex>']` |
+
+If any id above fails (404), the procedure tells you to re-discover it and fix this file in the same
+session — including the reconcile command.
+
+## Local notes
+
+<!-- Optional. Only what is true of THIS project and not of every project: a list the team renamed,
+     a destination another queue also uses, a title marker with a project-specific meaning. -->

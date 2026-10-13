@@ -1,0 +1,32 @@
+# Eval paired with prompts/implement.md
+# Purpose: ensure the implement prompt enforces TDD, uses MCP tools, never bare fetch
+
+id: "prompt-implement-contract"
+prompt_file: "prompts/implement.md"
+description: "Implement prompt must produce tests-first code that uses MCP tools and avoids bare fetch/axios"
+
+input: |
+  Persona: Backend Architect — regras em `aiteam/agents/backend-architect.md`, leia antes de codar.
+
+  Implement src/services/jwt-verifier.ts that verifies a JWT signed with RS256 against a JWKS URI.
+  Returns the decoded claims on success or throws a structured `JwtVerificationError` on failure.
+  Plan was approved. The project already has `jose` in package.json.
+
+expected_behavior:
+  - 'Report opens with the line `Persona: <nome> — mandato aplicado: <1 frase>` naming the Backend Architect'
+  - Includes a test file (jwt-verifier.test.ts) created BEFORE or alongside the implementation
+  - Tests cover happy path, expired token, invalid signature, malformed token
+  - Implementation uses the jose library — no manual base64/JWT parsing
+  - No direct `fetch(` or `axios.` calls — external HTTP must use the project's HTTP client or an MCP tool
+  - Returns a typed error class, not raw Error instances
+  - Records completion with the beads command (`node aiteam/scripts/beads.mjs done <id> --summary "…"`) or, equivalently, as an entry appended by hand to the bead file (.beads/tasks/<id>/<branch>.yaml) — never by editing the generated .beads/active.yaml
+
+pass_criteria:
+  no_bare_fetch: true
+  no_implementation_code: false
+
+fail_signals:
+  - "Report omits the Persona line — the only auditable evidence the mandate was loaded"
+  - "Implementation uses fetch() directly to retrieve the JWKS"
+  - "Implementation manually decodes the JWT without using jose"
+  - "Implementation lacks tests for the failure modes"

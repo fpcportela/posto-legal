@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# pre-commit — três gates, nesta ordem:
+#   1. .beads: dono por branch, acréscimo só no fim e formato (aiteam/docs/beads-schema.md §8);
+#   2. drift entre as personas e os subagentes nativos gerados (.claude/agents/);
+#   3. secret scan.
+# Este hook não faz `git add` de nada: o commit leva exatamente o que você
+# colocou no stage. O framework vive em aiteam/; o hook roda na raiz do repo.
+
+. "$(dirname "$0")/_beads.sh" || { echo "[beads] ✗ não consegui carregar $(dirname "$0")/_beads.sh" >&2; exit 1; }
+AITEAM="$BEADS_AITEAM"
+TSX="$AITEAM/node_modules/.bin/tsx"
+
+# ── 1. .beads ────────────────────────────────────────────────────────────────
+# Em modo legado (o active.yaml do modelo antigo ainda rastreado no HEAD e no
+# índice) o modelo novo ainda não vale: aviso para migrar, e nada entra em
+# .beads/tasks/ nem em .beads/project/ antes da migração.
+if beads_legacy; then
+  beads_legacy_notice
+  beads_legacy_pre_commit || exit 1
+else
+  beads_pre_commit || exit 1
+fi
+
+# Gates que precisam de tsx não rodam sem aiteam/node_modules — e isso não
+# pode passar em silêncio (uma worktree recém-criada nasce sem ele).
+if [ ! -x "$TSX" ]; then
+  beads_loud "aiteam/node_modules ausente: o drift das personas (sync-agents --check) NÃO rodou," \
+    "e o secret scan usou o fallback em bash, que cobre menos que o scanner TS." \
+    "Instale o toolchain: cd aiteam && npm install"
+fi
+
+# ── 2. Persona → subagente nativo (drift) ────────────────────────────────────
+# .claude/agents/ é gerado de aiteam/agents/ (ADR 0001). Commitar um binding
+# fora de sincronia é pior que não ter binding: o harness despacha a persona
+# antiga sem ninguém perceber.
+if [ -f "$AITEAM/scripts/sync-agents.ts" ] && [ -x "$TSX" ]; then
+  if ! "$TSX" "$AITEAM/scripts/sync-agents.ts" --check; then
+    echo "[agents] ERROR: .claude/agents/ divergiu das personas — rode 'npm --prefix aiteam run sync:agents' e inclua o resultado no commit."
+    exit 1
+  fi
+fi
+
+# ── 3. Secret scan ───────────────────────────────────────────────────────────
+# Caminho principal: o scanner TS testado (aiteam/src/secret-scanner.ts via
+# aiteam/scripts/scan-secrets.ts) — casa as chaves de cada provedor E material
+# de chave cru no diff staged, pelo VALOR e não pela menção. Fallback: um grep
+# em bash sobre as linhas adicionadas quando o toolchain falta.
+if [ -f "$AITEAM/scripts/scan-secrets.ts" ] && [ -x "$TSX" ]; then
+  if ! "$TSX" "$AITEAM/scripts/scan-secrets.ts"; then
+    echo "[secret-scan] Aborting commit — remove the secret(s) above (use placeholders in *.example files)."
+    exit 1
+  fi
+else
+  ADDED=$(git diff --cached -U0 --diff-filter=ACM -- . ':(exclude)*.example' 2>/dev/null \
+    | grep '^+' | grep -v '^+++' || true)
+  LEAKS=$(printf '%s\n' "$ADDED" | grep -nE \
+    -e '(ANTHROPIC_API_KEY|GEMINI_API_KEY|GOOGLE_API_KEY|OPENAI_API_KEY|LANGFUSE_SECRET_KEY|AWS_SECRET_ACCESS_KEY)[[:space:]]*[:=][[:space:]]*[^[:space:]<"'"'"']' \
+    -e 'sk-ant-[A-Za-z0-9_-]{20,}' \
+    -e 'AIza[0-9A-Za-z_-]{35}' \
+    -e 'AKIA[0-9A-Z]{16}' \
+    -e 'BEGIN [A-Z ]*PRIVATE KEY' \
+    || true)
+  if [ -n "$LEAKS" ]; then
+    echo "[secret-scan] ERROR: possible secret(s) in staged changes:"
+    echo "$LEAKS"
+    echo "Aborting commit. Remove the secret (use placeholders in *.example files)."
+    exit 1
+  fi
+fi

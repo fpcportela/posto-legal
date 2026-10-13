@@ -1,0 +1,40 @@
+{
+  "name": "rb-ai-team",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+
+  "runArgs": [
+    "--cap-drop", "ALL",
+    "--cap-add", "NET_BIND_SERVICE",
+    "--security-opt", "no-new-privileges",
+    "--security-opt", "seccomp=aiteam/.devcontainer/seccomp.json"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+
+  "postCreateCommand": "(cd aiteam && npm install) && git config core.hooksPath aiteam/githooks && chmod +x aiteam/githooks/*",
+
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "AI_SESSION_BUDGET_USD": "${localEnv:AI_SESSION_BUDGET_USD}"
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  }
+}

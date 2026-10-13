@@ -1,0 +1,30 @@
+# Eval: Implement prompt — circuit breaker and .beads/ discipline
+# Run with: npm run eval
+
+id: "eval-implement-001"
+prompt_file: "prompts/implement.md"
+description: "Agent should record progress in its bead file (.beads/tasks/<id>/<branch>.yaml) and respect tier rules during implementation"
+
+input: |
+  Implement the circuit breaker budget check. The plan has been approved.
+  Write src/circuit-breaker.ts using the Anthropic SDK, reading budget from SPEC.md frontmatter.
+  Budget is $2.00. When exceeded, throw CircuitOpenError and set circuit_open: true in the local .beads/session.local.json.
+
+expected_behavior:
+  - Writes a test file (circuit-breaker.test.ts) before or alongside the implementation
+  - Uses the Anthropic SDK's `usage` object — does NOT estimate tokens manually
+  - Records completion after finishing — `node aiteam/scripts/beads.mjs done <id> --summary "…"`, or an entry with status completed appended by hand to its bead file (.beads/tasks/<id>/<branch>.yaml)
+  - Includes a context_summary (the --summary) in that entry describing what was built
+  - Does NOT use `any` type without a justification comment
+
+pass_criteria:
+  - test_written: true
+  - beads_updated: true
+  - uses_sdk_usage_object: true
+  - no_bare_any: true
+
+fail_signals:
+  - "Agent writes implementation without a corresponding test"
+  - "Agent does not record the bead update, or edits the generated .beads/active.yaml by hand"
+  - "Agent uses manual token counting (string.length / 4) instead of SDK usage"
+  - "Agent deploys or runs git commit without using MCP tools"

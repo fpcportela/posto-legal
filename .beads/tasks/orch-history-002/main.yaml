@@ -1,0 +1,10 @@
+title: "[general] Recent work in POSTO LEGAL"
+description: "Busca de endereço no cadastro do posto (OpenStreetMap)"
+related_files:
+  - "README.md"
+  - "prototipo/index.html"
+created_at: "2026-10-08T13:50:34Z"
+entries:
+  - at: "2026-10-08T13:50:34Z"
+    status: "completed"
+    context_summary: "Bootstrapped from git history. Recent commits: Busca de endereço no cadastro do posto (OpenStreetMap)"

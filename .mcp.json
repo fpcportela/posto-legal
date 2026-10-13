@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "rb-ai-team-tools": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "aiteam/mcp/server.ts"
+      ],
+      "description": "Project-local MCP server exposing the rb-ai-team tools (run_tests, git_commit, deploy_preview, db_migrate, deploy_production) with permission-tier enforcement. Tier-3 tools require SPEC.md tier_defaults.allow_tier3=true."
+    },
+    "trello-tools": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "aiteam/mcp/trello-server.ts"
+      ],
+      "description": "Trello MCP: list boards/lists/cards, sync a list's cards + download the uploaded prints to .trello-cache/ (git-ignored), read card comments (read, Tier 1), and comment/move/create cards and add labels by name (write-back, Tier 2). Never Tier 3. Reads TRELLO_API_KEY/TRELLO_TOKEN from the gitignored root .env; without them the server starts and each call says what is missing."
+    }
+  }
+}

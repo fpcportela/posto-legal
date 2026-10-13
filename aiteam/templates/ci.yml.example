@@ -1,0 +1,133 @@
+# ci.yml.example — pipeline de PR de referência do rb-ai-team (AGENTS.md
+# §CI/CD Mandate, item 1). Copie para .github/workflows/ci.yml no projeto
+# consumidor e adapte SÓ o job `app`. Irmão do deploy.yml.example.
+#
+# DOIS JOBS, cada um no seu diretório:
+#   - framework: valida o aiteam/ vendorizado, com working-directory: aiteam
+#     no job. São os passos do ci.yml do próprio framework.
+#   - app: roda, na raiz, os comandos que o SPEC.md declara no bloco ci: do
+#     frontmatter — test sempre; typecheck e lint quando declarados.
+#
+# O job `app` é o que torna o item 1 verdadeiro. Sem ele, o pipeline valida a
+# dependência e não o produto. Copiado para um consumidor, o ci.yml do
+# framework roda tudo em aiteam/, e o `npm run test` do framework e o da app
+# são a mesma string no YAML: nada na leitura do arquivo denuncia a troca
+# (rb-ai-team#31). O aiteam/src/ci-contract.test.ts e o `aiteam doctor`
+# conferem que cada comando do ci: roda num passo deste pipeline, no workdir
+# declarado, e recusam um comando que só delega para o aiteam/.
+#
+# NÃO ponha `defaults.run.working-directory` no nível do workflow: ele vale
+# para os dois jobs, e foi assim que a suíte da app saiu do CI sem ninguém
+# ver. O diretório mora em cada job.
+#
+# SEM filtro de `paths`, por decisão: todo PR passa por este workflow. Um
+# `paths:` positivo aqui reprova no contrato (o PR que não toca esses caminhos
+# fica sem check); se precisar recortar, use `paths-ignore`, que só avisa. O
+# eval pago, que bate na API da Anthropic, fica num workflow à parte, com filtro.
+#
+# concurrency: este workflow dispara em push para main, então o group usa a
+# fórmula de 3 segmentos. Não a reescreva de memória — ver rb-ai-team
+# docs/consuming-INDEX.md §4 (sem o github.sha, uma rajada de 3+ pushes deixa
+# os commits do meio sem veredito de CI).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  framework:
+    name: Framework (aiteam) — typecheck, schemas e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: aiteam
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: aiteam/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Validate .beads schema
+        run: npm run validate:beads
+
+      - name: Validate persona → subagent bindings
+        run: npm run validate:agents
+
+      - name: Validate eval YAML schemas
+        run: |
+          set -e
+          shopt -s nullglob
+          for f in evals/*.eval.yaml prompts/*.eval.yaml; do
+            echo "→ Validating $f"
+            node --input-type=module -e "
+              import yaml from 'js-yaml';
+              import fs from 'fs';
+              const doc = yaml.load(fs.readFileSync('$f', 'utf8'));
+              for (const k of ['id', 'prompt_file', 'description', 'input', 'expected_behavior', 'pass_criteria']) {
+                if (!(k in doc)) { console.error('  ✗ Missing required field:', k); process.exit(1); }
+              }
+              console.log('  ✓', doc.id);
+            "
+          done
+
+      - name: Run unit tests
+        run: npm run test
+
+  app:
+    name: App — lint, typecheck e testes
+    runs-on: ubuntu-latest
+    # ADAPTE ao tempo da sua suíte: é um teto contra job pendurado (o padrão do
+    # GitHub é 6h), não uma reserva de cota.
+    timeout-minutes: 15
+    # ADAPTE: se a suíte precisa de banco, declare aqui `services:` (postgres,
+    # redis) e o `env:` que os testes leem.
+    steps:
+      - uses: actions/checkout@v4
+
+      # ADAPTE ao stack da app (actions/setup-python, pnpm/action-setup...).
+      # Exemplo para uma app Node na raiz do repo:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Os três passos abaixo são os comandos do bloco ci: do SPEC.md. Copie-os
+      # de lá, exatamente como estão declarados: o contrato compara o comando e
+      # o diretório. Remova Lint e Type check se o projeto não os declara; o de
+      # testes é obrigatório. Sem suíte automatizada, o SPEC.md declara
+      # `test: none` com `reason:`, e o passo de testes sai. O `local_test` do ci:
+      # (o portão local do TDD, opcional) não vira passo aqui: é só local, e este
+      # job roda o `test` completo.
+      - name: Lint (ci.lint)
+        run: npm run lint
+
+      - name: Type check (ci.typecheck)
+        run: npm run typecheck
+
+      - name: Tests (ci.test)
+        run: npm run test

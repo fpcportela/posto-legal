@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RB Ventures - Room Office</title>
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+            integrity="sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du"
+            crossorigin="anonymous"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base / Shared Styles */
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .office-container {
+            position: relative;
+            width: 1024px;
+            height: 1024px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: background-image 0.5s ease-in-out;
+        }
+
+        /* Hotspots */
+        .hotspot {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .hotspot-desk {
+            width: 15%;
+            height: 15%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Deep Debugger e QA são papéis reativos/sob-demanda (ver persona
+           files) — só aparecem quando têm task in_progress roteada pra eles.
+           .working sempre vence: uma mesa reactive-and-working fica visível. */
+        .hotspot-desk.reactive:not(.working) { display: none; }
+
+        /* Bead in_progress em outra branch ou worktree, ainda não mergeado
+           (aiteam/docs/beads-schema.md §13): a mesa anima como trabalhando e
+           leva a marca ↗ — não é o estado desta branch. A mesa já é `position: absolute`
+           (.hotspot): uma regra aqui que mexesse nisso a tiraria do lugar. */
+        .hotspot-desk.elsewhere::after {
+            content: '↗';
+            position: absolute;
+            top: 0;
+            right: 6%;
+            font: bold 18px sans-serif;
+            color: #fff;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px dashed #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            line-height: 22px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* ========================================================
+           THEME: GAMER (Retro 8-bit)
+           ======================================================== */
+        body[data-theme="gamer"] {
+            background: #0b0d12;
+            color: #fff;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        body[data-theme="gamer"] .theme-toggle {
+            background: #a371f7;
+            color: #0b0d12;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+        }
+
+        body[data-theme="gamer"] .office-container {
+            background-image: url('office_bg.png');
+        }
+
+        body[data-theme="gamer"] .hotspot-board {
+            top: 25%; left: 10%; width: 25%; height: 30%;
+            transform: skewY(20deg); border-radius: 4px;
+        }
+        body[data-theme="gamer"] .hotspot-board:hover {
+            box-shadow: inset 0 0 50px rgba(59, 130, 246, 0.5);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        body[data-theme="gamer"] .desk-1 { top: 40%; left: 35%; }
+        body[data-theme="gamer"] .desk-2 { top: 50%; left: 55%; }
+        body[data-theme="gamer"] .desk-3 { top: 60%; left: 25%; }
+        body[data-theme="gamer"] .desk-4 { top: 70%; left: 45%; }
+        body[data-theme="gamer"] .desk-5 { top: 45%; left: 70%; }
+        body[data-theme="gamer"] .desk-6 { top: 75%; left: 65%; }
+        body[data-theme="gamer"] .desk-7 { top: 80%; left: 30%; }
+        body[data-theme="gamer"] .desk-8 { top: 62%; left: 80%; }
+        body[data-theme="gamer"] .desk-9 { top: 85%; left: 78%; }
+        body[data-theme="gamer"] .desk-10 { top: 25%; left: 15%; }
+        body[data-theme="gamer"] .desk-11 { top: 20%; left: 55%; }
+
+        body[data-theme="gamer"] .avatar {
+            font-size: 48px;
+            display: block;
+            filter: drop-shadow(4px 4px 0 rgba(0,0,0,0.5));
+            transition: opacity 0.3s;
+        }
+
+        body[data-theme="gamer"] .hotspot-desk.working .avatar {
+            animation: workBounce 0.3s ease-in-out infinite alternate;
+            opacity: 1;
+        }
+        body[data-theme="gamer"] .hotspot-desk.idle .avatar {
+            animation: idleBreathe 3s ease-in-out infinite alternate;
+            opacity: 0.7;
+        }
+
+        body[data-theme="gamer"] .hotspot-desk.idle { opacity: 0.6; }
+        body[data-theme="gamer"] .hotspot-desk.idle:hover { opacity: 1; }
+        
+        body[data-theme="gamer"] #desk-frontend.working { background: radial-gradient(circle, rgba(163,113,247,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-backend.working { background: radial-gradient(circle, rgba(34,197,94,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-pm.working { background: radial-gradient(circle, rgba(249,115,22,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-orchestrator.working { background: radial-gradient(circle, rgba(239,68,68,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-data.working { background: radial-gradient(circle, rgba(6,182,212,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-sre.working { background: radial-gradient(circle, rgba(148,163,184,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-ux.working { background: radial-gradient(circle, rgba(236,72,153,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-devops.working { background: radial-gradient(circle, rgba(234,179,8,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-release.working { background: radial-gradient(circle, rgba(14,165,233,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-debug.working { background: radial-gradient(circle, rgba(217,70,239,0.4) 0%, transparent 60%); }
+        body[data-theme="gamer"] #desk-qa.working { background: radial-gradient(circle, rgba(20,184,166,0.4) 0%, transparent 60%); }
+
+        /* Speech Bubble (Gamer) */
+        body[data-theme="gamer"] .speech-bubble {
+            background: #1c1f26;
+            border: 2px solid #a371f7;
+            border-radius: 8px;
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.5);
+            font-size: 10px;
+            color: #e2e8f0;
+        }
+        body[data-theme="gamer"] .speech-bubble::after {
+            bottom: -10px; left: 20px;
+            border-width: 10px 10px 0; border-style: solid;
+            border-color: inherit;
+            border-bottom-color: transparent; border-right-color: transparent; border-left-color: transparent;
+        }
+        body[data-theme="gamer"] .task-item { border-bottom: 1px dashed #4a5568; }
+        body[data-theme="gamer"] .task-summary { background: #14161c; color: #8b97a8; border-left: 2px solid currentcolor; }
+
+        /* Status UI (Gamer) */
+        body[data-theme="gamer"] .status-ui {
+            font-size: 12px; color: #a371f7; background: rgba(0,0,0,0.8);
+            padding: 16px; border: 2px solid #a371f7; box-shadow: 4px 4px 0 #000;
+        }
+
+        /* ========================================================
+           THEME: SILICON VALLEY (Sober & Professional) 
+           ======================================================== */
+        body[data-theme="sv"] {
+            background: #f1f5f9;
+            color: #0f172a;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body[data-theme="sv"] .theme-toggle {
+            background: #fff;
+            color: #0f172a;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        body[data-theme="sv"] .office-container {
+            background-image: url('sv_office_bg.png');
+        }
+
+        body[data-theme="sv"] .hotspot-board {
+            top: 21%; left: 2.5%; width: 27%; height: 32%;
+            transform: skewY(15deg); border-radius: 8px;
+        }
+        body[data-theme="sv"] .hotspot-board:hover {
+            box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(2px);
+        }
+
+        body[data-theme="sv"] .desk-1 { top: 53%; left: 19%; }
+        body[data-theme="sv"] .desk-2 { top: 48%; left: 36%; }
+        body[data-theme="sv"] .desk-3 { top: 58%; left: 32%; }
+        body[data-theme="sv"] .desk-4 { top: 52%; left: 51%; }
+        body[data-theme="sv"] .desk-5 { top: 45%; left: 68%; }
+        body[data-theme="sv"] .desk-6 { top: 58%; left: 65%; }
+        body[data-theme="sv"] .desk-7 { top: 62%; left: 45%; }
+        body[data-theme="sv"] .desk-8 { top: 45%; left: 80%; }
+        body[data-theme="sv"] .desk-9 { top: 68%; left: 78%; }
+        body[data-theme="sv"] .desk-10 { top: 22%; left: 15%; }
+        body[data-theme="sv"] .desk-11 { top: 18%; left: 55%; }
+
+        body[data-theme="sv"] .avatar {
+            display: flex; justify-content: center; align-items: center;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            color: #64748b;
+            transition: all 0.3s;
+        }
+
+        body[data-theme="sv"] .hotspot-desk.idle .avatar {
+            animation: svPulse 4s ease-in-out infinite alternate;
+        }
+
+        /* Working animations for SV (Spinning Ring) */
+        body[data-theme="sv"] .hotspot-desk.working .avatar {
+            border-style: dashed;
+            border-width: 3px;
+            animation: svSpin 4s linear infinite;
+        }
+        /* Counter-spin inner SVG to keep it upright */
+        body[data-theme="sv"] .hotspot-desk.working .avatar svg {
+            animation: svReverseSpin 4s linear infinite;
+        }
+
+        body[data-theme="sv"] #desk-frontend.working .avatar { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.1); }
+        body[data-theme="sv"] #desk-backend.working .avatar { border-color: #10b981; color: #10b981; background: rgba(16,185,129,0.1); }
+        body[data-theme="sv"] #desk-pm.working .avatar { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.1); }
+        body[data-theme="sv"] #desk-orchestrator.working .avatar { border-color: #8b5cf6; color: #8b5cf6; background: rgba(139,92,246,0.1); }
+        body[data-theme="sv"] #desk-data.working .avatar { border-color: #06b6d4; color: #06b6d4; background: rgba(6,182,212,0.1); }
+        body[data-theme="sv"] #desk-sre.working .avatar { border-color: #94a3b8; color: #94a3b8; background: rgba(148,163,184,0.1); }
+        body[data-theme="sv"] #desk-ux.working .avatar { border-color: #ec4899; color: #ec4899; background: rgba(236,72,153,0.1); }
+        body[data-theme="sv"] #desk-devops.working .avatar { border-color: #eab308; color: #eab308; background: rgba(234,179,8,0.1); }
+        body[data-theme="sv"] #desk-release.working .avatar { border-color: #0ea5e9; color: #0ea5e9; background: rgba(14,165,233,0.1); }
+        body[data-theme="sv"] #desk-debug.working .avatar { border-color: #d946ef; color: #d946ef; background: rgba(217,70,239,0.1); }
+        body[data-theme="sv"] #desk-qa.working .avatar { border-color: #14b8a6; color: #14b8a6; background: rgba(20,184,166,0.1); }
+
+        /* Speech Bubble (SV) */
+        body[data-theme="sv"] .speech-bubble {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            font-size: 13px;
+            color: #0f172a;
+        }
+        body[data-theme="sv"] .speech-bubble::after {
+            display: none; /* No triangle in modern UI, it's a floating popover */
+        }
+        body[data-theme="sv"] .task-item { border-bottom: 1px solid #e2e8f0; padding-top: 8px; }
+        body[data-theme="sv"] .task-summary { background: #f8fafc; color: #475569; border-left: 2px solid currentcolor; border-radius: 4px; margin-bottom: 5px;}
+
+        /* Status UI (SV) */
+        body[data-theme="sv"] .status-ui {
+            font-size: 14px; color: #0f172a; background: #fff;
+            padding: 16px 24px; border: 1px solid #e2e8f0; border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+
+        body[data-theme="sv"] .board-nav {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        body[data-theme="sv"] .board-nav a { color: #0f172a; }
+
+        /* Shared Animations */
+        @keyframes workBounce { from { transform: translateY(0) scale(1); } to { transform: translateY(-10px) scale(1.1); } }
+        @keyframes idleBreathe { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+        @keyframes svPulse { from { opacity: 0.8; box-shadow: 0 0 0 rgba(0,0,0,0); } to { opacity: 1; box-shadow: 0 0 15px rgba(0,0,0,0.1); } }
+        @keyframes svSpin { 100% { transform: rotate(360deg); } }
+        @keyframes svReverseSpin { 100% { transform: rotate(-360deg); } }
+
+        /* Shared Speech Bubble */
+        .speech-bubble {
+            display: none;
+            position: absolute;
+            padding: 15px;
+            width: 350px;
+            z-index: 500;
+            line-height: 1.5;
+            pointer-events: auto;
+        }
+        .speech-bubble::after { content: ''; position: absolute; }
+        .task-item { cursor: pointer; transition: color 0.2s; }
+        .task-item:hover { color: inherit; opacity: 0.8;}
+        .task-status { display: inline-block; width: 20px; }
+        .task-summary { display: none; margin-top: 5px; font-size: 11px; padding: 8px; }
+        .task-item.expanded .task-summary { display: block; }
+        
+        .status-ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            line-height: 1.8;
+        }
+
+        /* Aviso discreto: a agregação de outras branches (↗) ficou parcial ou indisponível.
+           Texto fixo, só aparece quando há o que avisar; herda a cor do painel de status. */
+        .elsewhere-note {
+            display: block;
+            width: fit-content;
+            margin-top: 6px;
+            padding: 0 6px;
+            font: 600 10px/1.6 'Inter', sans-serif;
+            text-transform: none;
+            border: 1px dashed currentColor;
+            border-radius: 4px;
+            cursor: help;
+        }
+        .elsewhere-note[hidden] { display: none; }
+
+        /* Cross-page nav — fixed + top-center so it never disturbs the
+           flex-centered .office-container layout below it. */
+        .board-nav {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 150;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .board-nav a { color: #fff; margin: 0 4px; text-decoration: none; }
+        .board-nav a:hover { text-decoration: underline; }
+
+        /* Iframe Overlay */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(11, 13, 18, 0.95);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .overlay.active { display: block; opacity: 1; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body data-theme="gamer">
+
+    <div class="board-nav">
+        <a href="/">Sala</a> · <a href="/kanban">Kanban</a> · <a href="/panorama">Panorama</a>
+    </div>
+
+    <button id="themeToggle" onclick="toggleTheme()" class="theme-toggle">View: Silicon Valley</button>
+
+    <div class="status-ui">
+        > <span id="sys-label">SYSTEM</span>: <span id="m-proj">-</span><br>
+        > <span id="phase-label">PHASE</span>: <span id="m-phase">-</span>
+        <div class="elsewhere-note" id="elsewhere-note" role="status" hidden></div>
+    </div>
+
+    <div class="office-container">
+        <!-- Speech Bubble -->
+        <div class="speech-bubble" id="speechBubble" onclick="event.stopPropagation()"></div>
+
+        <!-- Interactive Whiteboard -->
+        <div class="hotspot hotspot-board" onclick="openKanban()" title="Click to open Agile Board"></div>
+
+        <!-- Desks -->
+        <div class="hotspot hotspot-desk desk-1" id="desk-frontend" title="Frontend Node" onclick="showHistory('desk-frontend', event)">
+            <div class="avatar">🎨</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-2" id="desk-backend" title="Backend Node" onclick="showHistory('desk-backend', event)">
+            <div class="avatar">⚙️</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-3" id="desk-pm" title="PM Node" onclick="showHistory('desk-pm', event)">
+            <div class="avatar">📋</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-4" id="desk-orchestrator" title="Orchestrator Node" onclick="showHistory('desk-orchestrator', event)">
+            <div class="avatar">🤖</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-5" id="desk-data" title="Data Engineer Node" onclick="showHistory('desk-data', event)">
+            <div class="avatar">📊</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-6" id="desk-sre" title="SRE Node" onclick="showHistory('desk-sre', event)">
+            <div class="avatar">🛡️</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-7" id="desk-ux" title="UX Designer Node" onclick="showHistory('desk-ux', event)">
+            <div class="avatar">🖌️</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-8" id="desk-devops" title="System Design Architect Node" onclick="showHistory('desk-devops', event)">
+            <div class="avatar">🏗️</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-9" id="desk-release" title="Release Engineer Node" onclick="showHistory('desk-release', event)">
+            <div class="avatar">🚀</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-10 reactive" id="desk-debug" title="Deep Debugger Node" onclick="showHistory('desk-debug', event)">
+            <div class="avatar">🚑</div>
+        </div>
+        <div class="hotspot hotspot-desk desk-11 reactive" id="desk-qa" title="QA &amp; Security Reviewer Node" onclick="showHistory('desk-qa', event)">
+            <div class="avatar">🔍</div>
+        </div>
+    </div>
+
+    <div class="overlay" id="kanbanOverlay">
+        <iframe src="/kanban" id="kanbanFrame"></iframe>
+    </div>
+
+    <script>
+        function openKanban() {
+            const theme = document.body.getAttribute('data-theme') || 'gamer';
+            const overlay = document.getElementById('kanbanOverlay');
+            overlay.style.display = 'block';
+            setTimeout(() => overlay.classList.add('active'), 10);
+            document.getElementById('kanbanFrame').src = `/kanban?embedded=true&theme=${theme}`;
+        }
+
+        window.addEventListener('message', function(e) {
+            if (e.data === 'close_kanban') {
+                const overlay = document.getElementById('kanbanOverlay');
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.style.display = 'none', 300);
+            }
+        });
+
+        // Routing table is the contract in aiteam/docs/beads-schema.md §5 — keep in sync.
+        function getPersonaDeskId(taskId) {
+            const id = String(taskId ?? '').toLowerCase();
+            if (['ui', 'web', 'design', 'creative', 'content', 'landing', 'panel', 'social', 'blog'].some(k => id.includes(k))) return 'desk-frontend';
+            if (['api', 'infra', 'database', 'scaffold'].some(k => id.includes(k))) return 'desk-backend';
+            if (['data', 'etl', 'rag', 'vector'].some(k => id.includes(k))) return 'desk-data';
+            if (['sre', 'finops', 'observability', 'sla', 'cloud'].some(k => id.includes(k))) return 'desk-sre';
+            if (['ux', 'a11y', 'journey', 'wcag', 'cro'].some(k => id.includes(k))) return 'desk-ux';
+            if (['spec', 'plan', 'brainstorm', 'research', 'funnel'].some(k => id.includes(k))) return 'desk-pm';
+            if (['devops', 'docker', 'terraform', 'topology', 'vps'].some(k => id.includes(k))) return 'desk-devops';
+            if (['deploy', 'release', 'rollout', 'rollback', 'ship'].some(k => id.includes(k))) return 'desk-release';
+            if (['debug', 'bugfix', 'hotfix', 'troubleshoot'].some(k => id.includes(k))) return 'desk-debug';
+            if (['qa', 'security', 'audit', 'review', 'compliance'].some(k => id.includes(k))) return 'desk-qa';
+            return 'desk-orchestrator';
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        const defaultAvatars = { 'desk-frontend': '🎨', 'desk-backend': '⚙️', 'desk-pm': '📋', 'desk-orchestrator': '🤖', 'desk-data': '📊', 'desk-sre': '🛡️', 'desk-ux': '🖌️', 'desk-devops': '🏗️', 'desk-release': '🚀', 'desk-debug': '🚑', 'desk-qa': '🔍' };
+        
+        const svAvatars = {
+            'desk-frontend': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`,
+            'desk-backend': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
+            'desk-pm': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
+            'desk-orchestrator': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>`,
+            'desk-data': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`,
+            'desk-sre': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`,
+            'desk-ux': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>`
+        };
+
+        const idleActions = ['☕', '💤', '📖', '💬', '🎮', '🎧', '🍩'];
+        let agentHistory = {};
+
+        // A agregação de outras branches pode ficar parcial (o prazo estourou) ou indisponível
+        // (sem node/beads.mjs, ou o comando falhou). Sem o aviso, nenhuma mesa com ↗ seria igual
+        // a "nada em outras branches". Só true/false de verdade valem, e o texto é fixo
+        // (textContent): nada que vem do servidor entra nele. Servidor antigo, sem os campos:
+        // sem aviso. Valor velho sozinho (acontece a cada 15 s) não é aviso.
+        let lastNoteKey = ''; // o que está na tela; a marcação nasce oculta e vazia
+        function renderElsewhereNote(data) {
+            const el = document.getElementById('elsewhere-note');
+            if (!el) return;
+            let text = '', title = '';
+            if (data.elsewhere_available === false) {
+                text = '↗ agregação indisponível';
+                title = 'Não consegui consultar as outras branches e worktrees (o comando beads falhou, passou do prazo, ou node/beads.mjs não existem): nada de lá é mostrado.';
+            } else if (data.elsewhere_partial === true) {
+                text = '↗ agregação parcial';
+                title = 'A leitura das outras branches e worktrees estourou o prazo: a lista de beads de lá pode estar incompleta.';
+            }
+            // Velho + indisponível: a última leitura é a própria leitura indisponível (nada de lá é
+            // mostrado), então "mostrando a última leitura" se contradiria.
+            if (text && data.elsewhere_stale === true) {
+                title += data.elsewhere_available === false
+                    ? ' Tentando de novo em segundo plano.'
+                    : ' Mostrando a última leitura; renovando em segundo plano.';
+            }
+            // O aviso é uma live region (role="status"): reescrevê-lo a cada poll de 2 s pode fazer o
+            // leitor de tela reanunciar. Só escreve quando o conteúdo muda e, se só o title mudou
+            // (o "velho" alterna a cada 15 s), o texto não é reescrito.
+            const key = text ? text + '\n' + title : '';
+            if (key === lastNoteKey) return;
+            lastNoteKey = key;
+            el.hidden = !text;
+            if (el.textContent !== text) el.textContent = text;
+            el.title = title;
+        }
+
+        function updateAvatars() {
+            const theme = document.body.getAttribute('data-theme');
+            document.querySelectorAll('.hotspot-desk').forEach(desk => {
+                const avatarDiv = desk.querySelector('.avatar');
+                if (theme === 'sv') {
+                    avatarDiv.innerHTML = svAvatars[desk.id] || defaultAvatars[desk.id];
+                } else {
+                    // Only restore emojis if we are not injecting idle emojis dynamically
+                    if (desk.classList.contains('working') || !desk.classList.contains('idle')) {
+                        avatarDiv.innerText = defaultAvatars[desk.id];
+                    }
+                }
+            });
+            
+            // Update labels
+            document.getElementById('sys-label').innerText = theme === 'sv' ? 'RB VENTURES' : 'SYSTEM';
+            document.getElementById('phase-label').innerText = theme === 'sv' ? 'SPRINT PHASE' : 'PHASE';
+            document.getElementById('themeToggle').innerText = theme === 'sv' ? 'View: Retro Gamer' : 'View: Silicon Valley';
+        }
+
+        function toggleTheme() {
+            const current = document.body.getAttribute('data-theme');
+            const newTheme = current === 'gamer' ? 'sv' : 'gamer';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('roomTheme', newTheme);
+            updateAvatars();
+            document.getElementById('speechBubble').style.display = 'none'; // reset bubble
+        }
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/state');
+                const data = await res.json();
+                renderElsewhereNote(data);
+
+                if (data.yaml) {
+                    const doc = jsyaml.load(data.yaml);
+
+                    if (doc.project) document.getElementById('m-proj').textContent = doc.project;
+                    if (doc.session) document.getElementById('m-phase').textContent = doc.session.current_task_phase || 'idle';
+
+                    const workingDesks = new Set();
+                    agentHistory = { 'desk-frontend': [], 'desk-backend': [], 'desk-pm': [], 'desk-orchestrator': [], 'desk-data': [], 'desk-sre': [], 'desk-ux': [], 'desk-devops': [], 'desk-release': [], 'desk-debug': [], 'desk-qa': [] };
+
+                    // Linhas do histórico por id: o bead que existe aqui e também em outra branch tem UMA
+                    // linha só (a local, o estado desta branch), e é nela que entra a marca ↗.
+                    const localById = new Map();
+                    if (doc.tasks) {
+                        doc.tasks.forEach(task => {
+                            const deskId = getPersonaDeskId(task.id);
+                            const row = { ...task };
+                            if (agentHistory[deskId]) agentHistory[deskId].push(row);
+                            localById.set(String(task.id), row);
+                            if (task.status === 'in_progress') workingDesks.add(deskId);
+                        });
+                    }
+
+                    // Beads de outras branches e worktrees (não mergeado): a mesa anima com a marca ↗
+                    // quando o bead está in_progress lá, e o histórico os lista como "não mergeado".
+                    const elsewhereDesks = new Set();
+                    const listedElsewhere = new Set();
+                    (Array.isArray(data.elsewhere) ? data.elsewhere : []).forEach(e => {
+                        if (!e || e.id === undefined) return;
+                        const deskId = getPersonaDeskId(e.id);
+                        const la = e.la || {};
+                        const f = (Array.isArray(e.fontes) && e.fontes[0]) || {};
+                        const origin = `${f.origem || f.ref || ''}${Array.isArray(e.fontes) && e.fontes.length > 1 ? ` +${e.fontes.length - 1}` : ''}`;
+                        const id = String(e.id);
+                        if (la.status === 'in_progress') elsewhereDesks.add(deskId);
+                        if (listedElsewhere.has(id)) return; // o mesmo id duas vezes em elsewhere: uma linha
+                        listedElsewhere.add(id);
+                        const local = localById.get(id);
+                        if (local) {
+                            // Já tem a linha local: ela ganha a marca de onde vem o estado de lá — só se
+                            // lá tem status, como o selo do Kanban (sem ele a marca sairia "↗  em  ·").
+                            if (la.status) local.elsewhereMark = { status: la.status, origin };
+                        } else if (agentHistory[deskId]) {
+                            agentHistory[deskId].push({ id: e.id, status: la.status, title: e.title, elsewhere: origin });
+                        }
+                    });
+
+                    const theme = document.body.getAttribute('data-theme');
+                    document.querySelectorAll('.hotspot-desk').forEach(desk => {
+                        const avatarDiv = desk.querySelector('.avatar');
+                        desk.classList.toggle('elsewhere', elsewhereDesks.has(desk.id));
+                        if (workingDesks.has(desk.id) || elsewhereDesks.has(desk.id)) {
+                            desk.classList.add('working');
+                            desk.classList.remove('idle');
+                            if (theme === 'gamer') avatarDiv.innerText = defaultAvatars[desk.id];
+                            else avatarDiv.innerHTML = svAvatars[desk.id] || defaultAvatars[desk.id];
+                        } else {
+                            desk.classList.remove('working');
+                            if (!desk.classList.contains('idle')) {
+                                desk.classList.add('idle');
+                                if (theme === 'sv') avatarDiv.innerHTML = svAvatars[desk.id] || defaultAvatars[desk.id];
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function showHistory(deskId, event) {
+            event.stopPropagation();
+            
+            const bubble = document.getElementById('speechBubble');
+            const desk = document.getElementById(deskId);
+            const deskRect = desk.getBoundingClientRect();
+            const containerRect = document.querySelector('.office-container').getBoundingClientRect();
+            
+            const top = deskRect.top - containerRect.top - 180; 
+            const left = deskRect.left - containerRect.left + 40;
+            
+            bubble.style.top = top + 'px';
+            bubble.style.left = left + 'px';
+            
+            const theme = document.body.getAttribute('data-theme');
+            const colorMap = {
+                'desk-frontend': '#3b82f6', // used SV colors broadly for history box
+                'desk-backend': '#10b981',
+                'desk-pm': '#f59e0b',
+                'desk-orchestrator': '#8b5cf6',
+                'desk-data': '#06b6d4',
+                'desk-sre': '#94a3b8',
+                'desk-ux': '#ec4899',
+                'desk-devops': '#eab308',
+                'desk-release': '#0ea5e9',
+                'desk-debug': '#d946ef',
+                'desk-qa': '#14b8a6'
+            };
+            const col = theme === 'sv' ? colorMap[deskId] : (deskId==='desk-frontend'?'#a371f7':colorMap[deskId]);
+            bubble.style.borderColor = col;
+            
+            const tasks = agentHistory[deskId] || [];
+            const title = theme === 'sv' ? desk.title : desk.title.replace(' Node', ' Desk');
+            let html = `<div style="color:${col}; margin-bottom:15px; font-size:12px; font-weight:bold; text-transform:uppercase;">${title}</div>`;
+            
+            if (tasks.length === 0) {
+                html += `<div>No recent activities.</div>`;
+            } else {
+                tasks.sort((a, b) => {
+                    if (a.status === 'in_progress') return -1;
+                    if (b.status === 'in_progress') return 1;
+                    return 0;
+                });
+
+                tasks.slice(0, 5).forEach(t => {
+                    let icon = '⏳';
+                    if (t.status === 'completed') icon = '✅';
+                    if (t.status === 'in_progress') icon = '🔥';
+                    if (t.status === 'blocked') icon = '❌';
+                    // De outra branch ou worktree (não mergeado): a marca ↗ e a origem no lugar da fase.
+                    if (t.elsewhere !== undefined) icon = '↗';
+
+                    const summary = esc(t.context_summary || t.description || t.title || 'No details available.');
+                    let phaseLabel = t.phase ? `(Phase ${esc(t.phase)})` : '';
+                    if (t.elsewhere !== undefined) phaseLabel = `${esc(t.elsewhere)} · não mergeado`;
+                    else if (t.status === 'in_progress') {
+                        const currentPhase = document.getElementById('m-phase').textContent;
+                        phaseLabel = phaseLabel ? `${phaseLabel} - [${currentPhase}]` : `[${currentPhase}]`;
+                    }
+                    // Bead local que em outra branch está noutro estado: a marca de onde vem (esc: é dado de lá).
+                    if (t.elsewhereMark) {
+                        const mark = `↗ ${esc(t.elsewhereMark.status)} em ${esc(t.elsewhereMark.origin)} · não mergeado`;
+                        phaseLabel = phaseLabel ? `${phaseLabel} ${mark}` : mark;
+                    }
+                    
+                    html += `
+                    <div class="task-item" onclick="this.classList.toggle('expanded'); event.stopPropagation();">
+                        <div style="font-weight: bold;"><span class="task-status">${icon}</span> ${esc(t.id)} <span style="color:#8b97a8; font-weight: normal; font-size: 9px;">${phaseLabel}</span></div>
+                        <div class="task-summary">${summary}</div>
+                    </div>`;
+                });
+            }
+            
+            bubble.innerHTML = html;
+            bubble.style.display = 'block';
+        }
+
+        document.addEventListener('click', () => {
+            document.getElementById('speechBubble').style.display = 'none';
+        });
+
+        function idleLoop() {
+            const theme = document.body.getAttribute('data-theme');
+            document.querySelectorAll('.hotspot-desk.idle').forEach(desk => {
+                if (theme === 'gamer' && Math.random() > 0.7) {
+                    const randomAction = idleActions[Math.floor(Math.random() * idleActions.length)];
+                    const avatarDiv = desk.querySelector('.avatar');
+                    avatarDiv.innerText = randomAction;
+                }
+            });
+        }
+
+        // Init
+        const savedTheme = localStorage.getItem('roomTheme') || 'gamer';
+        document.body.setAttribute('data-theme', savedTheme);
+        updateAvatars();
+        
+        fetchState();
+        setInterval(fetchState, 2000);
+        setInterval(idleLoop, 4000);
+    </script>
+</body>
+</html>

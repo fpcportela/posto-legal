@@ -1,0 +1,14 @@
+title: "Base de postos da ANP"
+description: "Importar revendedores (CNPJ, bandeira, endereço) para postos, geocodificar o que faltar e deduplicar com os cadastrados"
+effort: "L"
+impl_model: "sonnet"
+related_files:
+  - "supabase/schema.sql"
+tags:
+  - "anp"
+  - "postos"
+  - "geocodificacao"
+created_at: "2026-10-08T15:56:27Z"
+entries:
+  - at: "2026-10-08T15:56:27Z"
+    status: "pending"

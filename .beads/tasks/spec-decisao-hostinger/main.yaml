@@ -1,0 +1,14 @@
+title: "Decisão: migração para a Hostinger"
+description: "Definir produto (compartilhada ou VPS), como o deploy chega lá e onde fica o endpoint de versão; depois criar deploy.yml"
+effort: "S"
+impl_model: "sonnet"
+related_files:
+  - "SPEC.md"
+tags:
+  - "decisao"
+  - "deploy"
+  - "hostinger"
+created_at: "2026-10-08T15:56:40Z"
+entries:
+  - at: "2026-10-08T15:56:40Z"
+    status: "pending"

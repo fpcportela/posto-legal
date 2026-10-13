@@ -1,0 +1,41 @@
+version: '1.0'
+branch: archive
+project: ''
+last_updated: '2026-10-03T10:00:00.444Z'
+session:
+  active_spec_hash: ''
+  budget_usd: 0
+  cost_accumulated_usd: 0
+tasks:
+  - id: infra-arquivada-a
+    title: 'Primeira arquivada: com dois-pontos'
+    description: >-
+      Texto dobrado em várias linhas que o YAML junta numa linha só,
+      como os nós reais do completed.yaml
+    status: completed
+    effort: S
+    impl_model: sonnet
+    context_summary: >-
+      Entregue com testes. Segunda frase do resumo.
+    related_files:
+      - aiteam/src/a.ts
+    tags:
+      - beads
+    blockers: []
+    created_at: '2026-07-10T22:50:00Z'
+    updated_at: '2026-07-10T23:10:00Z'
+  - id: spec-arquivada-b
+    title: Segunda arquivada
+    status: completed
+    created_at: '2026-08-01T10:00:00Z'
+    updated_at: '2026-08-02T10:00:00.250Z'
+  - id: api-duplicada
+    title: Versão arquivada da duplicada (mais velha)
+    status: completed
+    created_at: '2026-09-01T10:00:00Z'
+    updated_at: '2026-09-15T10:00:00Z'
+  - id: orch-fora-do-indice
+    title: Arquivada que o índice perdeu (#30)
+    status: completed
+    created_at: '2026-10-03T09:00:00Z'
+    updated_at: '2026-10-03T10:00:00Z'

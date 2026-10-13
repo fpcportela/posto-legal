@@ -1,0 +1,29 @@
+# Eval paired with prompts/plan.md
+# Purpose: ensure the plan prompt produces the correct contract — structured plan, no premature code
+
+id: "prompt-plan-contract"
+prompt_file: "prompts/plan.md"
+description: "Plan prompt must produce a structured architectural plan with the sections that apply and zero implementation code"
+
+input: |
+  Task: Add a webhook receiver endpoint POST /webhooks/whatsapp that validates Meta's signature
+  header (X-Hub-Signature-256) and stores incoming messages in the database. SPEC.md has WhatsApp
+  ingestion in scope and lists Postgres + Prisma as the data layer.
+
+expected_behavior:
+  - Contains a "Problem Statement" section
+  - Contains an "Approach" section
+  - Contains a "Security Considerations" section
+  - Contains a "Tier Impact" section
+  - Contains a "Test Plan" section
+  - Does NOT contain complete TypeScript function bodies (no `function name() { ... }` with logic)
+  - Names a specific signature-verification approach (HMAC SHA-256 with shared secret)
+
+pass_criteria:
+  all_sections_present: true
+  no_implementation_code: true
+
+fail_signals:
+  - "Plan jumps straight into TypeScript implementation"
+  - "Plan omits the Security Considerations section despite handling untrusted webhook input"
+  - "Plan does not mention signature verification"

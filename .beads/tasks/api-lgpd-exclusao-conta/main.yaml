@@ -1,0 +1,15 @@
+title: "LGPD: exclusão de conta pelo próprio usuário"
+description: "Apagar perfil, garagem e abastecimentos; avaliações anonimizadas ou apagadas conforme decisão em aberto"
+effort: "M"
+impl_model: "sonnet"
+related_files:
+  - "supabase/schema.sql"
+  - "prototipo/index.html"
+tags:
+  - "lgpd"
+  - "auth"
+  - "supabase"
+created_at: "2026-10-08T15:56:35Z"
+entries:
+  - at: "2026-10-08T15:56:35Z"
+    status: "pending"

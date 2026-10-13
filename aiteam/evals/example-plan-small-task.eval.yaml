@@ -1,0 +1,31 @@
+# Eval: Plan prompt — proportionality on a scoped fix
+# Run with: npm run eval
+#
+# The plan prompt must not turn a bug fix into a seven-section architecture
+# document. The expected shape is the `.beads` task node: a one-paragraph
+# approach plus Acceptance Criteria, and the test to write first.
+
+id: "eval-plan-002-small-task"
+prompt_file: "prompts/plan.md"
+description: "Agent should recognise a scoped bug fix and answer with a short approach plus acceptance criteria, not the full architectural plan"
+
+input: |
+  Task: `formatDueDate()` in src/utils/date.ts shows the wrong day for users in UTC-3 when the
+  due date is at midnight UTC (it renders the previous day). Fix it. SPEC.md lists nothing about
+  date formatting; this is a bug in existing behaviour, no new dependency, no schema change.
+
+expected_behavior:
+  - States that this is a scoped fix and does not need the written architectural plan
+  - Gives a one-paragraph approach (where the timezone conversion goes wrong and how it is fixed)
+  - Gives Acceptance Criteria: the failing case and the expected rendering
+  - Names the test to write first (a date.test.ts case with a midnight-UTC fixture)
+  - Does NOT produce "Alternatives Considered", "Security Considerations" or "Open Questions" padding
+  - Does NOT contain implementation code
+
+pass_criteria:
+  no_implementation_code: true
+
+fail_signals:
+  - "The agent produces the full seven-section plan for a one-function bug fix"
+  - "The agent invents an alternative only to reject it"
+  - "The agent pauses waiting for plan approval instead of pointing at the first test"

@@ -1,0 +1,58 @@
+{
+  "_comment": "Canonical machine-readable Permission Tier map. Single source of truth for command->tier classification, consumed by aiteam/src/tier-classifier.ts (typed + tested) and aiteam/hooks/tier-guard.mjs (runtime PreToolUse guard). The human-readable tier table lives in AGENTS.md. Patterns are case-insensitive JS regexes; the first list that matches wins, checked tier3 -> tier2; anything else is Tier 1. tier3.patterns is the FULL union (legacy readers stay fully protective); ask_patterns is the chat-approvable deploy subset (must be a subset of patterns — unit-tested invariant). The guard classifies the command of every tool that runs one (Bash, PowerShell, Monitor, the desktop app's terminal), so patterns cover PowerShell/cmd syntax too. tier3.deny_hints (optional) maps a regex on the sub-command that blocks to the deny reason the guard gives instead of the break-glass instruction; first match wins, malformed entries are ignored. PATTERNS MUST NOT BACKTRACK CATASTROPHICALLY: the guard runs every pattern against the whole command, and a hook timeout fails OPEN (the command runs with no gate). A repetition whose body can match the same text two ways (an optional argument that can itself look like the next flag) takes exponential time: the ssh script pattern with 36 flags took 1 s and doubled every two flags until it was rewritten (2026-10-06). Make each iteration start at a delimiter and match one way only; the ssh patterns that scan the whole line look only at the FIRST ssh of it (a later one has fewer options) and, between `|;&`, at the first shell. The hook also runs the whole classification under a 2 s deadline and DENIES what overruns it, so a pattern the probe misses cannot fail open; a heredoc handed to ssh is a remote script, and each of its lines is also classified as `ssh <host> <line>`. ask_patterns promotes a command to ask only through the tier3.patterns entry it EQUALS (exact string): a stray ask pattern promotes nothing, and a command that also matches a deny-class pattern is denied. aiteam/src/tier-rules-regex-safety.test.ts measures every pattern of this file against adversarial inputs up to 4 KB, and node aiteam/scripts/doctor.mjs runs the same probe on the project's own file. WHICH FILE IS THE SOURCE: aiteam/templates/tier-rules.json, the canonical copy that ships with the vendored aiteam/ folder; in the rb-ai-team upstream the root .claude/tier-rules.json is a byte-for-byte copy of it, enforced by a drift test, so edit the template and copy it over. In a project, .claude/tier-rules.json belongs to the project: node aiteam/install.mjs seeds it from the template when it is missing and never overwrites it, and when the project file is missing or unreadable the guard uses this canonical copy (and says so in its reason) while the doctor fails.",
+  "tier3": {
+    "label": "Critical — production deploy (chat-approvable via ask_patterns) or destructive/system-level (deny; SPEC.md allow_tier3 is the only break-glass). SSH DEPLOY IS ASK, NOT DENY (revised 2026-07-29, issue #13): tying deploy to a single provider meant a provider outage/quota left a production project with NO way to ship at all. The ssh+deploy patterns (infra verbs docker/systemctl/service/kubectl, plus the project's own script via interpreter, direct path (also after `--` or a glued -oK=v), after a `&&`/`;`/`|` inside the quoted remote command, a shell that reads its script from stdin (`bash -s`, with or without a heredoc), or npm/make target) are ask-eligible: the agent may run them after a per-command human ASK. Deliberately NOT ask-eligible: `ssh <host> reboot|shutdown|poweroff` — that is host control, not deploy, and a single prompt is too cheap for it. All ssh patterns require a literal `ssh` first, so LOCAL docker/systemctl/bash stay untouched, and they demand an EXECUTION shape, so remote read-only stays free (`ssh host cat deploy.sh` is Tier 1). Deny still wins on a mixed chain, so opening SSH deploy cannot smuggle a destructive command alongside it.",
+    "patterns": [
+      "vercel\\s+.*--prod\\b",
+      "railway\\s+up\\b.*--environment\\s+production\\b",
+      "prisma\\s+migrate\\s+deploy\\b",
+      "prisma\\s+migrate\\s+reset\\b",
+      "\\brm\\s+-[a-z]*r[a-z]*f\\b",
+      "\\brm\\s+-[a-z]*f[a-z]*r\\b",
+      "\\b(remove-item|rm|ri|del|erase|rd|rmdir)\\b(?=.*\\s-r(e(c(u(r(se?)?)?)?)?)?\\b)(?=.*\\s-fo(r(ce?)?)?\\b)",
+      "\\b(rd|rmdir|del|erase)\\b(?=.*(\\s|/[a-z])/s\\b)(?=.*(\\s|/[a-z])/q\\b)",
+      "\\bgit\\s+push\\b(?:.*--(?:force(?!-with-lease|-if-includes)|mirror)|.*\\s-[a-eg-np-z0-9]*f|.*\\s[\"']?\\+\\S)",
+      "\\bdrop\\s+(table|database)\\b",
+      "\\btruncate\\s+table\\b",
+      "\\bgh\\s+workflow\\s+run\\s+\\S*deploy",
+      "\\bssh\\b.*\\b(docker|systemctl|service|kubectl)\\b",
+      "\\bssh\\b.*\\b(reboot|shutdown|poweroff)\\b",
+      "(?:^|[\\n\\r\\u2028\\u2029])(?:(?!\\bssh\\b)[^\\n\\r\\u2028\\u2029])*\\bssh\\b(?:[^|;&\\n\\r\\u2028\\u2029]*[|;&])*(?:(?!\\b(?:bash|sh|zsh)\\s)[^|;&\\n\\r\\u2028\\u2029])*\\b(?:bash|sh|zsh)\\s[^|;&]*?\\.(?:sh|bash)\\b",
+      "\\bssh\\b(?:\\s+-\\S*(?:\\s+(?!-)\\S+)?)*\\s+\\S+\\s+[\"']?[~./]\\S*\\.(?:sh|bash)\\b",
+      "^(?:(?!\\bssh\\b)[\\s\\S])*\\bssh\\b[\\s\\S]*?(?:&&|\\|\\||[;|(\\n\\r])\\s*[\"']?[~./][^\\s;&|\"']*\\.(?:sh|bash)\\b",
+      "^(?:(?!\\bssh\\b)[\\s\\S])*\\bssh\\b[\\s\\S]*?\\b(?:bash|sh|zsh)(?:\\s+-\\w+)*\\s+-s\\b",
+      "\\bssh\\b.*\\b(npm|pnpm|yarn|make)\\s+(run\\s+)?\\S*deploy"
+    ],
+    "ask_patterns": [
+      "vercel\\s+.*--prod\\b",
+      "railway\\s+up\\b.*--environment\\s+production\\b",
+      "prisma\\s+migrate\\s+deploy\\b",
+      "\\bgh\\s+workflow\\s+run\\s+\\S*deploy",
+      "\\bssh\\b.*\\b(docker|systemctl|service|kubectl)\\b",
+      "(?:^|[\\n\\r\\u2028\\u2029])(?:(?!\\bssh\\b)[^\\n\\r\\u2028\\u2029])*\\bssh\\b(?:[^|;&\\n\\r\\u2028\\u2029]*[|;&])*(?:(?!\\b(?:bash|sh|zsh)\\s)[^|;&\\n\\r\\u2028\\u2029])*\\b(?:bash|sh|zsh)\\s[^|;&]*?\\.(?:sh|bash)\\b",
+      "\\bssh\\b(?:\\s+-\\S*(?:\\s+(?!-)\\S+)?)*\\s+\\S+\\s+[\"']?[~./]\\S*\\.(?:sh|bash)\\b",
+      "^(?:(?!\\bssh\\b)[\\s\\S])*\\bssh\\b[\\s\\S]*?(?:&&|\\|\\||[;|(\\n\\r])\\s*[\"']?[~./][^\\s;&|\"']*\\.(?:sh|bash)\\b",
+      "^(?:(?!\\bssh\\b)[\\s\\S])*\\bssh\\b[\\s\\S]*?\\b(?:bash|sh|zsh)(?:\\s+-\\w+)*\\s+-s\\b",
+      "\\bssh\\b.*\\b(npm|pnpm|yarn|make)\\s+(run\\s+)?\\S*deploy"
+    ],
+    "deny_hints": [
+      {
+        "match": "\\bssh\\b.*\\b(reboot|shutdown|poweroff)\\b",
+        "hint": "Rebooting, shutting down or powering off a host is not an agent task. Ask a human to do it from the provider's panel or their own SSH session."
+      }
+    ]
+  },
+  "tier2": {
+    "label": "Moderate — local mutations, installs, commits, preview deploys.",
+    "patterns": [
+      "\\bgit\\s+commit\\b",
+      "\\bgit\\s+push\\b",
+      "\\bnpm\\s+(install|ci|update)\\b",
+      "\\bpnpm\\s+(install|add|update)\\b",
+      "\\byarn\\s+(add|install)\\b",
+      "\\bprisma\\s+migrate\\s+dev\\b",
+      "\\bvercel\\b",
+      "\\brailway\\s+up\\b"
+    ]
+  }
+}

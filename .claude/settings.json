@@ -1,0 +1,70 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(prisma migrate reset:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node aiteam/hooks/tier-guard.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "PowerShell|Monitor|mcp__terminal__run_in_terminal",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node aiteam/hooks/tier-guard.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node aiteam/hooks/infra-kb-guard.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node aiteam/hooks/beads-guard.mjs"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node aiteam/hooks/gate-edit-guard.mjs"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node aiteam/hooks/session-brief.mjs"
+          }
+        ]
+      }
+    ]
+  },
+  "worktree": {
+    "baseRef": "head"
+  }
+}

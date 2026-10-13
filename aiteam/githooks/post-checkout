@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# post-checkout — regenera as visões geradas do .beads (active.yaml e
+# index.yaml) depois de trocar de branch, restaurar um arquivo, criar uma
+# worktree ou clonar. Contrato: aiteam/docs/beads-schema.md §7.3.
+#
+# As visões são ignoradas pelo git: regenerá-las nunca suja a árvore. Este
+# hook não escreve nada versionado e não mexe no .git/config (que é
+# compartilhado com o checkout principal e as outras worktrees).
+#
+# git passa: $1 = HEAD anterior, $2 = HEAD novo, $3 = 1 em troca de branch,
+# 0 em checkout de arquivo.
+
+. "$(dirname "$0")/_beads.sh" || exit 0
+
+if beads_legacy; then
+  [ "$3" = "1" ] && beads_legacy_notice
+fi
+beads_regenerate --quiet
+
+# Worktree vinculada (git worktree add, git switch dentro dela): liga o
+# aiteam/node_modules do checkout principal, se ela não tiver o seu. Nunca roda
+# npm e nunca sobrescreve o que já existe; no principal e em checkout de
+# arquivo ($3 = 0) não faz nada. Dispara no `git worktree add` e no `claude -w`,
+# mas NÃO na worktree que o Claude Code cria para um subagente despachado com
+# isolation: "worktree" — observado: ela nasce sem as visões do .beads, que este
+# hook regenera. Lá o brief manda ligar à mão: node aiteam/scripts/worktree-link.mjs
+# link (e unlink antes do report). Para remover uma worktree com o link use scripts/worktree-link.mjs remove: no
+# Windows o `git worktree remove` segue a junction e apaga o alvo.
+if [ "$3" = "1" ]; then
+  node=$(beads_node)
+  [ -n "$node" ] && { "$node" "$BEADS_AITEAM/scripts/worktree-link.mjs" link || true; }
+fi
+exit 0

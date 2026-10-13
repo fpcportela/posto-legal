@@ -1,0 +1,12 @@
+title: "App Expo: mapa, abastecimentos, avaliações e geofence"
+description: "App React Native (Expo) com o mesmo modelo e regras; geofence com notificação local, ~20 postos mais próximos no iOS"
+effort: "L"
+impl_model: "opus"
+tags:
+  - "expo"
+  - "mobile"
+  - "geofence"
+created_at: "2026-10-08T15:56:31Z"
+entries:
+  - at: "2026-10-08T15:56:31Z"
+    status: "pending"

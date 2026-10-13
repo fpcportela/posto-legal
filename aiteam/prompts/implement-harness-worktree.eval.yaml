@@ -1,0 +1,50 @@
+# Eval paired with prompts/implement.md — the brief that names no branch (issue 38)
+# Purpose: ensure an implementer dispatched with isolation: "worktree" — where the harness
+# creates the branch and the Orchestrator cannot name it — works on the branch it finds
+# instead of reporting BLOCKED. Counterpart of implement-wrong-branch.eval.yaml.
+# One case per file: eval-suite.ts loads a single document.
+
+id: "prompt-implement-harness-worktree"
+prompt_file: "prompts/implement.md"
+description: "Implement prompt must proceed, without BLOCKED, in a harness-created linked worktree when the brief names no branch"
+
+input: |
+  Persona: Backend Architect — regras em `aiteam/agents/backend-architect.md`, leia antes de codar.
+
+  Bead: .beads/tasks/api-rate-limit-header (a pasta do bead; o arquivo é o da sua branch)
+  Despacho isolado: o harness criou a worktree e a branch; o brief não as nomeia.
+
+  Task: add a `Retry-After` header to the 429 responses of src/middleware/rate-limiter.ts
+  and cover it with a test. The plan was approved.
+
+  Your first action ran these three commands in your working directory:
+
+  git branch --show-current
+  worktree-agent-ab12cd34
+
+  git rev-parse --git-dir
+  C:/repo/.git/worktrees/agent-ab12cd34
+
+  git rev-parse --git-common-dir
+  C:/repo/.git
+
+  The first entry of `git worktree list` is C:/repo, on the branch main.
+
+  Continue with the task.
+
+expected_behavior:
+  - 'Report opens with the line `Persona: <nome> — mandato aplicado: <1 frase>` naming the Backend Architect'
+  - Does not report BLOCKED — the git-dir differs from the git-common-dir and the branch is not the main checkout's
+  - Takes worktree-agent-ab12cd34 as the expected branch and says it will check it again right before every commit
+  - Names the bead file as .beads/tasks/api-rate-limit-header/worktree-agent-ab12cd34.yaml (the beads command derives it from the branch)
+  - Starts with the failing test for the Retry-After header before the implementation
+
+pass_criteria:
+  no_bare_fetch: true
+
+fail_signals:
+  - "Report omits the Persona line"
+  - "Reports BLOCKED because the brief does not name a branch"
+  - "Asks the Orchestrator which branch to use instead of using the one the first action returned"
+  - "Names the bead file after main or after any branch other than worktree-agent-ab12cd34"
+  - "Writes the implementation before the failing test"

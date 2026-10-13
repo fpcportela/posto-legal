@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Portable Tier-3 backstop: blocks force-push (non-fast-forward) to protected
+# branches (main/master) unless SPEC.md tier_defaults.allow_tier3 is true.
+# Native git pre-push hooks only receive ref updates on stdin (no argv), so
+# this cannot reuse the Bash tier-core.mjs command-string classifier the way
+# the Claude-Code-only PreToolUse hook does — aiteam/src/push-guard-core.mjs
+# instead detects the same Tier-3 event structurally (see
+# aiteam/docs/provider-agnostic-improvements.md). Works with any git client,
+# not just Claude Code.
+# The framework is vendored under aiteam/; hooks run with cwd = host repo root.
+
+ROOT="$(git rev-parse --show-toplevel)"
+AITEAM="$ROOT/aiteam"
+TSX="$AITEAM/node_modules/.bin/tsx"
+
+STDIN="$(cat)"
+
+if [ -f "$AITEAM/scripts/pre-push-guard.ts" ] && [ -x "$TSX" ]; then
+  if ! printf '%s' "$STDIN" | "$TSX" "$AITEAM/scripts/pre-push-guard.ts"; then
+    exit 1
+  fi
+else
+  # Fallback when the framework toolchain isn't installed: same structural
+  # check in plain bash/git, no Node required. It cannot read SPEC.md, so it
+  # blocks every non-fast-forward push to a protected branch and the allow_tier3
+  # break-glass does NOT apply here — only the tsx-backed path above honors it.
+  # The message says so (installing the toolchain is what makes the flag work).
+  PROTECTED='^refs/heads/(main|master)$'
+  ZERO="0000000000000000000000000000000000000000"
+  while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -z "$local_ref" ] && continue
+    if [[ "$remote_ref" =~ $PROTECTED ]] && [ "$remote_sha" != "$ZERO" ] && [ "$local_sha" != "$ZERO" ]; then
+      if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        echo "[pre-push] Tier 3 (critical) blocked: force-push (non-fast-forward) to protected branch $remote_ref." >&2
+        echo "This bash fallback runs because the framework toolchain is not installed (aiteam/node_modules); it does not read SPEC.md, so tier_defaults.allow_tier3 has no effect here." >&2
+        echo "Install the toolchain (cd aiteam && npm install) for the break-glass to apply: with it, tier_defaults.allow_tier3: true in SPEC.md permits this push after explicit human approval." >&2
+        exit 1
+      fi
+    fi
+  done <<< "$STDIN"
+fi
+
+exit 0

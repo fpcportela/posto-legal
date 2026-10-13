@@ -1,0 +1,6 @@
+# Dependências do framework. SEM barra final, de propósito: em Linux/macOS a
+# worktree vinculada liga aiteam/node_modules com um symlink (scripts/worktree-link.mjs),
+# e um symlink para diretório não é um diretório para o git — `node_modules/` não o
+# casaria e `git add -A` o commitaria como conteúdo (rb-ai-team#38). Esta regra
+# viaja com o aiteam/ vendorizado: não depende do .gitignore do consumidor.
+/node_modules

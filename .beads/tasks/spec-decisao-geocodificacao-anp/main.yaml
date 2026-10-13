@@ -1,0 +1,14 @@
+title: "Decisão: geocodificação dos postos da ANP"
+description: "Photon/Nominatim respeitando limites de uso, ou outra fonte gratuita, para postos sem coordenada"
+effort: "S"
+impl_model: "sonnet"
+related_files:
+  - "SPEC.md"
+tags:
+  - "decisao"
+  - "anp"
+  - "geocodificacao"
+created_at: "2026-10-08T15:56:57Z"
+entries:
+  - at: "2026-10-08T15:56:57Z"
+    status: "pending"

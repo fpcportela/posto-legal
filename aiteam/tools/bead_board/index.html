@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Office - Bead Board V2</title>
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+            integrity="sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du"
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"
+            integrity="sha384-948ahk4ZmxYVYOc+rxN1H2gM1EJ2Duhp7uHtZ4WSLkV4Vtx5MUqnV+l7u9B+jFv+"
+            crossorigin="anonymous"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --pixel-font: 'Press Start 2P', monospace;
+            --main-font: 'Inter', sans-serif;
+            --bg-room: #4a5568;
+            --wall-color: #2d3748;
+            --corkboard: #deaa6b;
+            --cork-border: #8b5a2b;
+            --paper-bg: #fdf6e3;
+            --text-dark: #1a202c;
+            --accent: #3182ce;
+            --black: #000000;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-room);
+            color: var(--text-dark);
+            font-family: var(--main-font);
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Bar / Room Header */
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--wall-color);
+            border: 4px solid var(--black);
+            box-shadow: 4px 4px 0 var(--black);
+            padding: 16px;
+            margin-bottom: 24px;
+            color: #fff;
+        }
+
+        .room-title {
+            font-family: var(--pixel-font);
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #fbbf24;
+            text-shadow: 2px 2px 0 var(--black);
+        }
+
+        .board-nav {
+            font-family: var(--main-font);
+            font-size: 10px;
+            font-weight: 400;
+            text-transform: none;
+            text-shadow: none;
+            margin-top: 4px;
+            opacity: 0.85;
+        }
+        .board-nav a { color: #63b3ed; text-decoration: none; }
+        .board-nav a:hover { text-decoration: underline; }
+
+        .meta-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            font-family: var(--pixel-font);
+        }
+
+        /* Aviso discreto: a agregação de outras branches (↗) ficou parcial ou indisponível.
+           Texto fixo, só aparece quando há o que avisar. */
+        .elsewhere-note {
+            font-family: var(--main-font);
+            font-size: 10px;
+            padding: 2px 6px;
+            border: 1px dashed currentColor;
+            color: #fbbf24;
+            cursor: help;
+            white-space: nowrap;
+            flex: none;
+            align-self: center;
+        }
+        .elsewhere-note[hidden] { display: none; }
+
+        /* Interactive Elements */
+        .room-actions {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn-pixel {
+            font-family: var(--pixel-font);
+            font-size: 10px;
+            padding: 10px 16px;
+            background: #48bb78;
+            color: #fff;
+            border: 4px solid var(--black);
+            box-shadow: 4px 4px 0 var(--black);
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.1s;
+        }
+        .btn-pixel:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--black);
+        }
+        
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-input {
+            font-family: var(--pixel-font);
+            font-size: 10px;
+            padding: 10px;
+            border: 4px solid var(--black);
+            width: 250px;
+        }
+        .search-input:focus {
+            outline: none;
+            background: #e2e8f0;
+        }
+
+        /* Corkboard (Kanban) */
+        .corkboard {
+            flex-grow: 1;
+            background: var(--corkboard);
+            border: 8px solid var(--cork-border);
+            border-radius: 4px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 8px 8px 0 var(--black);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .column {
+            background: rgba(255, 255, 255, 0.1);
+            border: 4px dashed rgba(139, 90, 43, 0.5);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .col-header {
+            font-family: var(--pixel-font);
+            font-size: 12px;
+            text-align: center;
+            padding: 12px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            border-bottom: 4px solid var(--black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .col-content {
+            padding: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Post-it Cards */
+        .card {
+            background: var(--paper-bg);
+            border: 2px solid var(--black);
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+            padding: 12px;
+            position: relative;
+        }
+
+        /* A visual pin on top of the card */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            background: #e53e3e;
+            border: 2px solid var(--black);
+            border-radius: 50%;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+        }
+
+        /* Bead de outra branch ou worktree, ainda não mergeado (aiteam/docs/beads-schema.md §13):
+           cartão-fantasma, de borda tracejada — não é o estado desta branch. */
+        .card.ghost {
+            background: transparent;
+            border: 2px dashed var(--black);
+            box-shadow: none;
+            opacity: 0.85;
+        }
+        .card.ghost::before { display: none; }
+        .origin-badge {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            background: transparent;
+            border: 1px dashed var(--black);
+            color: #4a5568;
+            word-break: break-all;
+        }
+
+        .card-id {
+            font-family: var(--pixel-font);
+            font-size: 8px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+        .badge {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            background: #cbd5e0;
+            border: 1px solid var(--black);
+        }
+
+        /* Agent Desk */
+        .agent-desk {
+            margin-top: 12px;
+            background: #fff;
+            border: 2px solid var(--black);
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            font-size: 24px;
+            animation: workBounce 0.5s steps(2) infinite;
+        }
+
+        @keyframes workBounce {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .agent-info {
+            flex-grow: 1;
+        }
+
+        .agent-label {
+            font-family: var(--pixel-font);
+            font-size: 8px;
+            color: #e53e3e;
+            margin-bottom: 4px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #edf2f7;
+            border: 1px solid var(--black);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 30%;
+            background: #48bb78;
+            animation: load 2s steps(10) infinite;
+        }
+
+        @keyframes load {
+            from { left: -100%; }
+            to { left: 100%; }
+        }
+
+        /* Silicon Valley Theme Overrides */
+        body[data-theme="sv"] {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        body[data-theme="sv"] .room-header {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            color: #0f172a;
+            border-radius: 12px;
+        }
+
+        body[data-theme="sv"] .room-title {
+            font-family: var(--main-font);
+            font-weight: 700;
+            color: #2563eb;
+            text-shadow: none;
+            font-size: 18px;
+        }
+
+        body[data-theme="sv"] .board-nav a {
+            color: #2563eb;
+        }
+
+        body[data-theme="sv"] .meta-stats {
+            font-family: var(--main-font);
+            color: #64748b;
+        }
+
+        body[data-theme="sv"] .elsewhere-note {
+            color: #b45309;
+            border-radius: 6px;
+        }
+
+        body[data-theme="sv"] .btn-pixel {
+            font-family: var(--main-font);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            background: #2563eb;
+            font-size: 12px;
+            padding: 8px 16px;
+        }
+
+        body[data-theme="sv"] .search-input {
+            font-family: var(--main-font);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        body[data-theme="sv"] .corkboard {
+            background: #f1f5f9;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+            gap: 24px;
+        }
+
+        body[data-theme="sv"] .column {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
+
+        body[data-theme="sv"] .col-header {
+            font-family: var(--main-font);
+            background: #fff;
+            color: #0f172a;
+            border-bottom: 1px solid #e2e8f0;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        body[data-theme="sv"] .card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        body[data-theme="sv"] .card::before {
+            display: none; /* Hide the pin */
+        }
+
+        body[data-theme="sv"] .card.ghost {
+            background: rgba(148, 163, 184, 0.08);
+            border: 1px dashed #94a3b8;
+            box-shadow: none;
+        }
+
+        body[data-theme="sv"] .origin-badge {
+            font-family: var(--main-font);
+            border: 1px dashed #94a3b8;
+            border-radius: 6px;
+            color: #475569;
+        }
+
+        body[data-theme="sv"] .card-id {
+            font-family: var(--main-font);
+            font-weight: 600;
+            color: #3b82f6;
+            font-size: 10px;
+        }
+
+        body[data-theme="sv"] .card-desc {
+            color: #1e293b;
+        }
+
+        body[data-theme="sv"] .agent-desk {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        body[data-theme="sv"] .agent-label {
+            font-family: var(--main-font);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        body[data-theme="sv"] .progress-bar {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f1f5f9;
+        }
+        
+        body[data-theme="sv"] .avatar {
+            animation: none; /* No bouncing in SV mode */
+        }
+
+        body[data-theme="sv"] .badge {
+            border: 1px solid #e2e8f0;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 4px;
+        }
+
+        /* Knowledge Base Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal {
+            background: var(--paper-bg);
+            border: 8px solid var(--black);
+            width: 80%;
+            height: 80%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 16px 16px 0 var(--black);
+        }
+
+        .modal-header {
+            background: var(--black);
+            color: #fff;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--pixel-font);
+            font-size: 12px;
+        }
+
+        .modal-close {
+            background: #e53e3e;
+            color: #fff;
+            border: 2px solid #fff;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-family: var(--pixel-font);
+        }
+
+        .modal-body {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .doc-sidebar {
+            width: 200px;
+            background: #edf2f7;
+            border-right: 4px solid var(--black);
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .doc-item {
+            font-family: var(--pixel-font);
+            font-size: 10px;
+            padding: 12px 8px;
+            cursor: pointer;
+            border-bottom: 2px solid #cbd5e0;
+        }
+        .doc-item:hover, .doc-item.active {
+            background: #cbd5e0;
+            font-weight: bold;
+        }
+
+        .doc-content {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #fff;
+            font-family: var(--main-font);
+            line-height: 1.6;
+        }
+        
+        .doc-content h1, .doc-content h2 { border-bottom: 2px solid #edf2f7; padding-bottom: 8px; }
+        .doc-content pre { background: #1a202c; color: #fff; padding: 16px; border-radius: 4px; overflow-x: auto; }
+        .doc-content code { background: #edf2f7; padding: 2px 4px; border-radius: 2px; }
+
+        .archived-chip { font-size: 0.75em; opacity: 0.7; margin-left: 6px; }
+        .archived-card { opacity: 0.6; border-style: dashed; }
+
+    </style>
+</head>
+<body>
+
+    <div class="room-header">
+        <div class="room-title">
+            🏢 Room Office: <span id="m-proj">-</span>
+            <div class="board-nav"><a href="/">Sala</a> · <a href="/kanban">Kanban</a> · <a href="/panorama">Panorama</a></div>
+        </div>
+        <div class="meta-stats">
+            <div>CASH: <span id="m-budget" style="color:#48bb78">-</span></div>
+            <div>PHASE: <span id="m-phase" style="color:#a371f7">-</span></div>
+            <div class="elsewhere-note" id="elsewhere-note" role="status" hidden></div>
+        </div>
+        <div class="room-actions">
+            <button id="btnExitRoom" class="btn-pixel" style="display: none; background: #e53e3e;" onclick="exitRoom()">🔙 Exit Room</button>
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search tasks...">
+            </div>
+            <button class="btn-pixel" onclick="openDocs()">📚 Bookshelf</button>
+        </div>
+    </div>
+
+    <div class="corkboard">
+        <div class="column">
+            <div class="col-header">
+                <span>PENDING</span> <span id="c-pending">0</span>
+            </div>
+            <div class="col-content" id="col-pending"></div>
+        </div>
+        <div class="column">
+            <div class="col-header" style="color: #fbbf24;">
+                <span>IN PROGRESS</span> <span id="c-progress">0</span>
+            </div>
+            <div class="col-content" id="col-progress"></div>
+        </div>
+        <div class="column">
+            <div class="col-header" style="color: #48bb78;">
+                <span>COMPLETED</span> <span id="c-completed">0</span> <span id="c-archived" class="archived-chip"></span>
+            </div>
+            <div class="col-content" id="col-completed"></div>
+        </div>
+    </div>
+
+    <!-- Docs Modal -->
+    <div class="modal-overlay" id="docsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span>📚 Project Knowledge Base</span>
+                <button class="modal-close" onclick="closeDocs()">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="doc-sidebar" id="docSidebar">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div class="doc-content" id="docViewer">
+                    <div style="color: #718096; text-align: center; margin-top: 40px; font-family: var(--pixel-font); font-size: 10px;">Select a document from the shelf...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allTasks = [];
+        // Beads de outras branches e worktrees, ainda não mergeados (`elsewhere` de /api/state).
+        // Texto de outra branch: sempre por esc() antes de virar HTML.
+        let elsewhere = [];
+        let docsData = {};
+
+        // Check if embedded
+        const urlParams = new URLSearchParams(window.location.search);
+        const isEmbedded = urlParams.get('embedded') === 'true';
+        const currentTheme = urlParams.get('theme') || 'gamer';
+        
+        // Apply theme
+        document.body.setAttribute('data-theme', currentTheme);
+
+        if (isEmbedded) {
+            const btn = document.getElementById('btnExitRoom');
+            btn.style.display = 'block';
+            if (currentTheme === 'sv') {
+                btn.style.background = '#64748b'; // Muted slate for SV exit
+            }
+        }
+
+        function exitRoom() {
+            window.parent.postMessage('close_kanban', '*');
+        }
+
+        // Routing table is the contract in aiteam/docs/beads-schema.md §5 — keep in sync
+        // (mesmas 11 rotas e emojis de room.html's getPersonaDeskId()).
+        function getAvatar(taskId) {
+            const id = String(taskId ?? '').toLowerCase();
+            if (['ui', 'web', 'design', 'creative', 'content', 'landing', 'panel', 'social', 'blog'].some(k => id.includes(k))) return '🎨';
+            if (['api', 'infra', 'database', 'scaffold'].some(k => id.includes(k))) return '⚙️';
+            if (['data', 'etl', 'rag', 'vector'].some(k => id.includes(k))) return '📊';
+            if (['sre', 'finops', 'observability', 'sla', 'cloud'].some(k => id.includes(k))) return '🛡️';
+            if (['ux', 'a11y', 'journey', 'wcag', 'cro'].some(k => id.includes(k))) return '🖌️';
+            if (['spec', 'plan', 'brainstorm', 'research', 'funnel'].some(k => id.includes(k))) return '📋';
+            if (['devops', 'docker', 'terraform', 'topology', 'vps'].some(k => id.includes(k))) return '🏗️';
+            if (['deploy', 'release', 'rollout', 'rollback', 'ship'].some(k => id.includes(k))) return '🚀';
+            if (['debug', 'bugfix', 'hotfix', 'troubleshoot'].some(k => id.includes(k))) return '🚑';
+            if (['qa', 'security', 'audit', 'review', 'compliance'].some(k => id.includes(k))) return '🔍';
+            return '🤖';
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // "↗ origem · não mergeado": de onde vem o estado de outra branch.
+        function originLabel(e) {
+            const f = (e && Array.isArray(e.fontes) && e.fontes[0]) || null;
+            if (!f) return '';
+            const more = e.fontes.length > 1 ? ` +${e.fontes.length - 1}` : '';
+            return `${f.origem || f.ref || ''}${more}`;
+        }
+
+        // A agregação de outras branches pode ficar parcial (o prazo estourou) ou indisponível
+        // (sem node/beads.mjs, ou o comando falhou). Sem o aviso, a lista vazia de `elsewhere`
+        // seria igual a "nada em outras branches". Só true/false de verdade valem, e o texto é
+        // fixo (textContent): nada que vem do servidor entra nele. Servidor antigo, sem os
+        // campos: sem aviso. Valor velho sozinho (acontece a cada 15 s) não é aviso.
+        let lastNoteKey = ''; // o que está na tela; a marcação nasce oculta e vazia
+        function renderElsewhereNote(data) {
+            const el = document.getElementById('elsewhere-note');
+            if (!el) return;
+            let text = '', title = '';
+            if (data.elsewhere_available === false) {
+                text = '↗ agregação indisponível';
+                title = 'Não consegui consultar as outras branches e worktrees (o comando beads falhou, passou do prazo, ou node/beads.mjs não existem): nada de lá é mostrado.';
+            } else if (data.elsewhere_partial === true) {
+                text = '↗ agregação parcial';
+                title = 'A leitura das outras branches e worktrees estourou o prazo: a lista de beads de lá pode estar incompleta.';
+            }
+            // Velho + indisponível: a última leitura é a própria leitura indisponível (nada de lá é
+            // mostrado), então "mostrando a última leitura" se contradiria.
+            if (text && data.elsewhere_stale === true) {
+                title += data.elsewhere_available === false
+                    ? ' Tentando de novo em segundo plano.'
+                    : ' Mostrando a última leitura; renovando em segundo plano.';
+            }
+            // O aviso é uma live region (role="status"): reescrevê-lo a cada poll de 2 s pode fazer o
+            // leitor de tela reanunciar. Só escreve quando o conteúdo muda e, se só o title mudou
+            // (o "velho" alterna a cada 15 s), o texto não é reescrito.
+            const key = text ? text + '\n' + title : '';
+            if (key === lastNoteKey) return;
+            lastNoteKey = key;
+            el.hidden = !text;
+            if (el.textContent !== text) el.textContent = text;
+            el.title = title;
+        }
+
+        function elsewhereById() {
+            const map = new Map();
+            (Array.isArray(elsewhere) ? elsewhere : []).forEach(e => { if (e && e.id !== undefined) map.set(String(e.id), e); });
+            return map;
+        }
+
+        // Quando o que mudou lá foi o stage, o status sozinho não diria nada de novo: o stage de lá
+        // entra ao lado, como `(aqui → lá)` se daqui tem stage, ou só `(lá)`. Texto de outra branch: esc().
+        function stageChange(other) {
+            const la = other.la && other.la.stage ? String(other.la.stage) : '';
+            const here = other.aqui && other.aqui.stage ? String(other.aqui.stage) : '';
+            if (!la || la === here) return '';
+            return ` (${here ? `${esc(here)} → ` : ''}${esc(la)})`;
+        }
+
+        // Cartão-fantasma: bead que só existe em outra branch ou worktree.
+        function buildGhost(e) {
+            const div = document.createElement('div');
+            div.className = 'card task-card ghost';
+            const title = String(e.title ?? '');
+            div.dataset.title = (String(e.id ?? '') + ' ' + title).toLowerCase();
+            const la = e.la || {};
+            const stage = la.stage ? ` (${esc(la.stage)})` : '';
+            // Concluído (ou noutro estado) aqui e mudado lá: o fantasma diz o que é aqui.
+            const here = e.aqui && e.aqui.status ? ` · aqui: ${esc(e.aqui.status === 'completed' ? 'concluído' : e.aqui.status)}` : '';
+            div.innerHTML = `
+                <span class="card-id">#${esc(e.id)}</span>
+                <div class="card-desc">${esc(title)}</div>
+                <div class="badges"><span class="origin-badge">↗ ${esc(originLabel(e))} · não mergeado${stage}${here}</span></div>
+            `;
+            return div;
+        }
+
+        function buildCard(task, currentTaskPhase = '', other = null) {
+            const div = document.createElement('div');
+            div.className = 'card task-card';
+            const desc = task.description || task.title || '';
+            div.dataset.title = (String(task.id ?? '') + ' ' + desc).toLowerCase();
+
+            let badges = [];
+            if (task.effort) badges.push(`<span class="badge">${esc(task.effort)}</span>`);
+            // O estado lá é outro (outra branch ou worktree, não mergeado): selo no cartão local.
+            if (other && other.la && other.la.status) {
+                badges.push(`<span class="origin-badge">↗ ${esc(other.la.status)}${stageChange(other)} em ${esc(originLabel(other))} · não mergeado</span>`);
+            }
+            
+            if (task.estimated_time_m !== undefined || task.estimated_cost_usd !== undefined) {
+                let estimates = [];
+                if (task.estimated_time_m !== undefined) estimates.push(`⏱ ${task.estimated_time_m}m`);
+                if (task.estimated_cost_usd !== undefined) estimates.push(`💸 $${parseFloat(task.estimated_cost_usd).toFixed(2)}`);
+                badges.push(`<span class="badge" style="background:#bee3f8; border-color:#2b6cb0; color:#2b6cb0;">${estimates.join(' | ')}</span>`);
+            }
+
+            let agentHtml = '';
+            if (task.status === 'in_progress') {
+                const avatar = getAvatar(task.id);
+                let phaseHtml = currentTaskPhase ? `<div style="font-family: var(--pixel-font); font-size: 6px; color: #a371f7; margin-top: 6px;">> ${esc(currentTaskPhase)}</div>` : '';
+                agentHtml = `
+                <div class="agent-desk">
+                    <div class="avatar">${avatar}</div>
+                    <div class="agent-info">
+                        <div class="agent-label">AGENT WORKING</div>
+                        <div class="progress-bar"><div class="progress-fill"></div></div>
+                        ${phaseHtml}
+                    </div>
+                </div>`;
+            }
+
+            div.innerHTML = `
+                <span class="card-id">#${esc(task.id)}</span>
+                <div class="card-desc">${esc(desc)}</div>
+                <div class="badges">${badges.join('')}</div>
+                ${agentHtml}
+            `;
+            return div;
+        }
+
+        function renderBoard() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            const colP = document.getElementById('col-pending');
+            const colI = document.getElementById('col-progress');
+            const colC = document.getElementById('col-completed');
+
+            colP.innerHTML = ''; colI.innerHTML = ''; colC.innerHTML = '';
+            let cP = 0, cI = 0, cC = 0;
+
+            const others = elsewhereById();
+            allTasks.forEach(task => {
+                const titleStr = (String(task.id ?? '') + ' ' + (task.description || task.title || '')).toLowerCase();
+                if (searchTerm && !titleStr.includes(searchTerm)) {
+                    return; // skip if filtered out
+                }
+
+                const card = buildCard(task, window.currentTaskPhase || '', others.get(String(task.id ?? '')) || null);
+                const st = task.status || 'pending';
+                if (st === 'completed') { colC.prepend(card); cC++; }
+                else if (st === 'pending') { colP.appendChild(card); cP++; }
+                else { colI.appendChild(card); cI++; }
+            });
+
+            // Beads que não são cartão local (só existem em outra branch ou worktree, ou aqui
+            // estão concluídos e fora do active.yaml): cartões-fantasma, na coluna do estado de lá.
+            // Não entram nos contadores — eles contam o estado desta branch.
+            const localIds = new Set(allTasks.map(t => String(t.id ?? '')));
+            others.forEach((e, id) => {
+                if (localIds.has(id)) return; // o bead local ganha só o selo
+                const titleStr = (id + ' ' + String(e.title ?? '')).toLowerCase();
+                if (searchTerm && !titleStr.includes(searchTerm)) return;
+                const ghost = buildGhost(e);
+                const st = (e.la && e.la.status) || 'pending';
+                if (st === 'completed') colC.prepend(ghost);
+                else if (st === 'pending') colP.appendChild(ghost);
+                else colI.appendChild(ghost);
+            });
+
+            document.getElementById('c-pending').textContent = cP;
+            document.getElementById('c-progress').textContent = cI;
+            document.getElementById('c-completed').textContent = cC;
+        }
+
+        function renderArchivedRecent(indexText) {
+            let entries = [];
+            try {
+                const parsed = jsyaml.load(indexText);
+                if (Array.isArray(parsed)) entries = parsed;
+            } catch (e) { return; }
+
+            // .beads/index.yaml (aiteam/docs/beads-schema.md §7.2) lists every bead,
+            // live and completed; the live ones are already cards from active.yaml.
+            // The legacy archive index only had completed entries (no status filter hit).
+            entries = entries.filter(e => e && (e.status ?? 'completed') === 'completed');
+            const colC = document.getElementById('col-completed');
+            entries.slice(-10).reverse().forEach(e => {
+                try {
+                    const div = document.createElement('div');
+                    div.className = 'card archived-card';
+                    const tags = Array.isArray(e.tags) && e.tags.length ? ` · ${e.tags.join(', ')}` : '';
+                    div.innerHTML = `
+                        <span class="card-id">#${esc(String(e.id ?? ''))}</span>
+                        <div class="card-desc">${esc(String(e.title ?? ''))}</div>
+                        <div class="badges"><span class="badge">📦 ${esc(String(e.done ?? e.archived ?? ''))}${esc(tags)}</span></div>
+                    `;
+                    colC.appendChild(div);
+                } catch (err) {
+                    // A null/malformed entry (e.g. hand-edited index.yaml) must not
+                    // abort the whole render loop — skip just this one card.
+                    console.error('renderArchivedRecent: skipping malformed entry', err);
+                }
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', renderBoard);
+
+        async function fetchState() {
+            try {
+                const res = await fetch('/api/state');
+                const data = await res.json();
+                renderElsewhereNote(data);
+
+                if (data.yaml) {
+                    const doc = jsyaml.load(data.yaml);
+
+                    // The branch comes from git (server.py), not from the generated view.
+                    const projLabel = [doc.project, data.branch].filter(Boolean).join(' · ');
+                    if (projLabel) document.getElementById('m-proj').textContent = projLabel;
+                    
+                    if (doc.session) {
+                        const cost = parseFloat(doc.session.cost_accumulated_usd) || 0;
+                        const budget = parseFloat(doc.session.budget_usd) || 0;
+                        document.getElementById('m-budget').textContent = `$${cost.toFixed(2)} / $${budget.toFixed(2)}`;
+                        window.currentTaskPhase = doc.session.current_task_phase || '';
+                        document.getElementById('m-phase').textContent = window.currentTaskPhase;
+                    }
+
+                    elsewhere = Array.isArray(data.elsewhere) ? data.elsewhere : [];
+                    if (doc.tasks) {
+                        allTasks = doc.tasks;
+                        renderBoard();
+                    }
+
+                    const archived = (doc.archive && Number(doc.archive.count)) || 0;
+                    const chip = document.getElementById('c-archived');
+                    if (chip) chip.textContent = archived > 0 ? `📦 ${archived} concluídas` : '';
+
+                    if (data.index) {
+                        renderArchivedRecent(data.index);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Docs Knowledge Base Logic
+        async function openDocs() {
+            document.getElementById('docsModal').style.display = 'flex';
+            try {
+                const res = await fetch('/api/docs');
+                docsData = await res.json();
+                
+                const sidebar = document.getElementById('docSidebar');
+                sidebar.innerHTML = '';
+                
+                Object.keys(docsData).forEach(filename => {
+                    const div = document.createElement('div');
+                    div.className = 'doc-item';
+                    div.textContent = filename;
+                    div.onclick = () => viewDoc(filename, div);
+                    sidebar.appendChild(div);
+                });
+                
+                if (Object.keys(docsData).length > 0) {
+                    viewDoc(Object.keys(docsData)[0], sidebar.firstChild);
+                }
+            } catch (e) {
+                document.getElementById('docViewer').innerHTML = `<p style="color:red">Failed to load docs: ${e}</p>`;
+            }
+        }
+
+        function viewDoc(filename, el) {
+            document.querySelectorAll('.doc-item').forEach(d => d.classList.remove('active'));
+            if (el) el.classList.add('active');
+            
+            const raw = docsData[filename] || '';
+            document.getElementById('docViewer').innerHTML = marked.parse(raw);
+        }
+
+        function closeDocs() {
+            document.getElementById('docsModal').style.display = 'none';
+        }
+
+        fetchState();
+        setInterval(fetchState, 2000);
+    </script>
+</body>
+</html>

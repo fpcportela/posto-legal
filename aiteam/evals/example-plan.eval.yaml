@@ -1,0 +1,30 @@
+# Eval: Plan prompt — basic feature planning
+# Run with: npm run eval
+
+id: "eval-plan-001"
+prompt_file: "prompts/plan.md"
+description: "Agent should produce a structured plan with the sections that apply before implementing a feature"
+
+input: |
+  Task: Add a user authentication endpoint (POST /auth/login) that accepts email + password,
+  validates against the database, and returns a JWT. The SPEC.md has JWT auth in scope.
+
+expected_behavior:
+  - Contains a "Problem Statement" section
+  - Contains an "Approach" section with file paths
+  - Contains a "Security Considerations" section that mentions prompt injection or JWT secret handling
+  - Contains a "Tier Impact" section
+  - Does NOT contain any implementation code (no TypeScript function bodies)
+  - Lists "Open Questions" only if there are real ones — no padding
+
+# Mapping, not a list: runEval() indexes pass_criteria by key, so a list of
+# single-key maps silently disables every auto-check and the eval passes empty.
+pass_criteria:
+  all_sections_present: true
+  no_implementation_code: true
+  security_section_non_empty: true
+
+fail_signals:
+  - "The agent writes a TypeScript function inside the plan"
+  - "The security section says 'None' for a login endpoint"
+  - "The agent skips the Tier Impact section"

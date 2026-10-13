@@ -1,0 +1,39 @@
+{
+  "_comment": "Blueprint 8.3 — seccomp hardening for the rb-ai-team devcontainer. Strategy: default-allow with an explicit deny of high-risk syscalls that normal Node/npm/git/tsx workloads never use but are classic kernel-manipulation / container-escape primitives. This is guaranteed not to EPERM the toolchain (unlike a strict allowlist) and coexists with the docker-in-docker feature. NEXT STEP: once the container can be built in CI, tighten to a Docker-default-style allowlist (defaultAction SCMP_ACT_ERRNO) and iterate on any EPERM. eBPF is intentionally blocked here; note that eBPF-based enforcement is Linux/CI-only and unavailable under WSL2 — seccomp is the portable hardening step.",
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": [
+    "SCMP_ARCH_X86_64",
+    "SCMP_ARCH_X86",
+    "SCMP_ARCH_X32",
+    "SCMP_ARCH_AARCH64",
+    "SCMP_ARCH_ARM"
+  ],
+  "syscalls": [
+    {
+      "names": [
+        "init_module",
+        "finit_module",
+        "delete_module",
+        "create_module",
+        "query_module",
+        "kexec_load",
+        "kexec_file_load",
+        "add_key",
+        "request_key",
+        "keyctl",
+        "reboot",
+        "swapon",
+        "swapoff",
+        "bpf",
+        "ptrace",
+        "process_vm_readv",
+        "process_vm_writev",
+        "_sysctl",
+        "nfsservctl"
+      ],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "Kernel module loading, kexec, kernel keyring, reboot, swap, eBPF, process tracing/memory access, and legacy sysctl/nfs control — none used by Node/npm/git; all are container-escape or kernel-tampering primitives."
+    }
+  ]
+}

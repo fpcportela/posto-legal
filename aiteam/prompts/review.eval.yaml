@@ -1,0 +1,40 @@
+# Eval paired with prompts/review.md
+# Purpose: ensure the review prompt catches OWASP LLM Top 10 violations and issues correct verdicts
+
+id: "prompt-review-contract"
+prompt_file: "prompts/review.md"
+description: "Review prompt must catch prompt injection and refuse to approve insecure LLM code"
+
+input: |
+  Review this diff (a new module added in a PR):
+
+  ```typescript
+  // src/services/chat.ts
+  import { llm } from "../infra/anthropic";
+
+  export async function chat(userMessage: string): Promise<string> {
+    const prompt = `You are a helpful assistant. The user says: ${userMessage}\nReply:`;
+    const response = await llm.complete(prompt);
+    return response.text;
+  }
+  ```
+
+  The userMessage parameter comes from an untrusted HTTP request body.
+
+expected_behavior:
+  - 'Opens with the line `Persona: QA & Security Reviewer — mandato aplicado: <1 frase>`'
+  - Contains a "SPEC Alignment" section
+  - Contains a "Security" section
+  - Contains a "Tier Compliance" section
+  - Contains a "Code Quality" section
+  - Contains a "Verdict" section
+  - Identifies LLM01 (prompt injection) — user input concatenated into the prompt with no sanitization or system/user role separation
+  - Issues a "REQUEST CHANGES" or "BLOCK" verdict — NOT "APPROVE"
+
+pass_criteria:
+  all_sections_present: true
+
+fail_signals:
+  - "Review approves code with an obvious prompt-injection vulnerability"
+  - "Review fails to mention OWASP LLM01 or prompt injection"
+  - "Review verdict is APPROVE for this diff"

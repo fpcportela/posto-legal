@@ -1,0 +1,5 @@
+{
+  "_comment": "Padroes que a copia canonica do tier-rules.json ja teve e foram trocados por serem perigosos. Ficam aqui como controle negativo dos testes (a sondagem de ReDoS tem de reprova-los; o padrao novo tem de casar tudo o que o antigo casava) e NAO sao lidos por nenhum codigo de producao.",
+  "sshScriptByPath": "\\bssh\\b(\\s+-\\w+(\\s+\\S+)?)*\\s+\\S+\\s+[\"']?[~./]\\S*\\.(sh|bash)\\b",
+  "sshShellScriptCubic": "\\bssh\\b.*\\b(bash|sh|zsh)\\s+[^|;&]*\\.(sh|bash)\\b"
+}

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# post-merge — regenera as visões do .beads depois de um merge ou de um pull
+# (inclusive fast-forward) e imprime os avisos de combinação: empate de
+# horário entre branches, bead definido por duas branches, bead pulado.
+# Contrato: aiteam/docs/beads-schema.md §4 e §7.3.
+#
+# Merge de .beads não precisa de driver: cada branch escreve só os seus
+# arquivos, então o git nunca conflita aqui. Um merge limpo de uma branch
+# aberta antes da migração traz o espelho dela sem passar pelo pre-commit: o
+# --merge avisa alto (§11).
+
+. "$(dirname "$0")/_beads.sh" || exit 0
+
+if beads_legacy; then
+  beads_legacy_notice
+  # --merge também aqui: um active.yaml antigo trazido por merge num repo já
+  # migrado religa o modo legado, e esse resíduo tem de aparecer.
+  beads_regenerate --quiet --merge
+  exit 0
+fi
+beads_regenerate --merge
+exit 0

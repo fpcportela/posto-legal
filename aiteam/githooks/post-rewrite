@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# post-rewrite — regenera as visões do .beads depois de um rebase ou de um
+# `commit --amend` ($1 = rebase | amend). Contrato: aiteam/docs/beads-schema.md §7.3.
+
+. "$(dirname "$0")/_beads.sh" || exit 0
+
+# O git manda no stdin a lista de commits reescritos; consumir evita SIGPIPE.
+cat >/dev/null
+
+beads_legacy && exit 0
+beads_regenerate --quiet
+# O git roda os commits de um rebase com -n: o `rebase --continue` não chama o
+# pre-commit. Uma branch do modelo antigo rebaseada sobre a default migrada pode ter
+# perdido o bead no `git rm --cached` do active.yaml/espelho — aqui, no fim, o que
+# dá é conferir e avisar alto (§11).
+[ "$1" = "rebase" ] && beads_rewrite_check
+exit 0

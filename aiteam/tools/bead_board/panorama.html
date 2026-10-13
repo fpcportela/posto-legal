@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panorama do Backlog — Bead Board</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"
+          integrity="sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du"
+          crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1420; --panel: #1a2233; --line: #2a3550; --text: #e6ebf5;
+      --muted: #8b97b0; --green: #3fb950; --amber: #d29922; --red: #f85149; --accent: #58a6ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; padding: 24px; }
+    a { color: var(--accent); text-decoration: none; }
+    .nav { display: flex; gap: 16px; margin-bottom: 20px; font-size: 14px; }
+    .nav a.active { font-weight: 600; border-bottom: 2px solid var(--accent); }
+    h1 { font-size: 28px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+    .tile .n { font-size: 26px; font-weight: 700; } .tile .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .section-h { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 24px 0 12px; }
+    .phase { margin-bottom: 14px; }
+    .phase-head { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+    .phase-head .sub2 { color: var(--muted); font-size: 12px; }
+    .bar { height: 14px; border-radius: 7px; background: var(--line); overflow: hidden; display: flex; }
+    .bar .seg { height: 100%; }
+    .seg.completed { background: var(--green); } .seg.in_progress { background: var(--accent); }
+    .seg.pending { background: var(--amber); } .seg.blocked { background: var(--red); }
+    .callout { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 18px; }
+    .callout .note { margin-bottom: 12px; line-height: 1.5; }
+    .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .chip { background: #0d1117; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-family: monospace; font-size: 13px; }
+    .chip.bottleneck { border-color: var(--amber); color: var(--amber); }
+    .arrow { color: var(--muted); }
+    .empty { color: var(--muted); font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/">Sala</a><a href="/kanban">Kanban</a><a href="/panorama" class="active">Panorama</a>
+  </div>
+  <h1 id="title">Panorama do Backlog</h1>
+  <div class="sub" id="meta"></div>
+  <div class="tiles" id="tiles"></div>
+  <div class="section-h">Progresso por fase</div>
+  <div id="phases"></div>
+  <div class="section-h">Caminho crítico</div>
+  <div class="callout" id="critical"></div>
+
+  <script type="module">
+    import { rollupPhases, partitionReadiness, buildDependencyGraph, computeCriticalPath, danglingBlockers }
+      from './panorama-model.mjs';
+
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+    function renderTiles(doc, rollups, readiness) {
+      const total = rollups.reduce((a, g) => a + g.total, 0);
+      const done = rollups.reduce((a, g) => a + g.completed, 0);
+      const cost = Number(doc?.session?.cost_accumulated_usd ?? 0);
+      const budget = Number(doc?.session?.budget_usd ?? 0);
+      const tile = (n, l) => `<div class="tile"><div class="n">${esc(n)}</div><div class="l">${esc(l)}</div></div>`;
+      document.getElementById('tiles').innerHTML =
+        tile(`${done}/${total}`, 'concluídas') +
+        tile(readiness.ready.length, 'prontas para iniciar') +
+        tile(readiness.blocked.length, 'bloqueadas') +
+        tile(`$${cost.toFixed(2)} / $${budget.toFixed(2)}`, 'orçamento');
+    }
+
+    function renderPhases(rollups) {
+      const seg = (g, k) => g[k] ? `<div class="seg ${k}" style="width:${(g[k] / g.total) * 100}%"></div>` : '';
+      document.getElementById('phases').innerHTML = rollups.map((g) => `
+        <div class="phase">
+          <div class="phase-head">
+            <span>${esc(g.name)} ${g.subtitle ? `<span class="sub2">· ${esc(g.subtitle)}</span>` : ''}</span>
+            <span class="sub2">${g.completed}/${g.total} concluídas${g.blocked ? ` · ${g.blocked} bloqueadas` : ''}</span>
+          </div>
+          <div class="bar">${seg(g,'completed')}${seg(g,'in_progress')}${seg(g,'pending')}${seg(g,'blocked')}</div>
+        </div>`).join('') || '<div class="empty">Sem fases nem tasks.</div>';
+    }
+
+    function renderCritical(doc, graph) {
+      const cp = computeCriticalPath(graph);
+      const note = doc?.session?.focus_note ? `<div class="note">${esc(doc.session.focus_note)}</div>` : '';
+      let chain = '<div class="empty">Sem dependências mapeadas.</div>';
+      if (cp.chain.length) {
+        chain = '<div class="chain">' + cp.chain.map((id, i) =>
+          `${i ? '<span class="arrow">→</span>' : ''}<span class="chip ${id === cp.bottleneck ? 'bottleneck' : ''}">${esc(id)}</span>`
+        ).join('') + '</div>';
+        if (cp.bottleneck) chain += `<div class="sub2" style="margin-top:8px;color:var(--muted)">Gargalo: <code>${esc(cp.bottleneck)}</code> desbloqueia ${cp.unblocks} task(s).</div>`;
+      }
+      const dangling = danglingBlockers(doc);
+      const warn = dangling.length ? `<div class="sub2" style="margin-top:10px;color:var(--amber)">⚠ ${dangling.length} blocker(s) apontam ids inexistentes (typo ou task arquivada).</div>` : '';
+      document.getElementById('critical').innerHTML = note + chain + warn;
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/state');
+        const data = await res.json();
+        const doc = jsyaml.load(data.yaml) || {};
+        document.getElementById('meta').textContent =
+          `${doc.project || '(sem nome)'} · branch ${data.branch || doc.branch || '?'} · fase ${doc.session?.current_task_phase || '—'}`;
+        const rollups = rollupPhases(doc);
+        const readiness = partitionReadiness(doc);
+        renderTiles(doc, rollups, readiness);
+        renderPhases(rollups);
+        renderCritical(doc, buildDependencyGraph(doc));
+      } catch (e) {
+        document.getElementById('critical').innerHTML = `<div class="empty">Estado indisponível: ${esc(e.message)}</div>`;
+      }
+    }
+    refresh();
+    setInterval(refresh, 30000);
+  </script>
+</body>
+</html>

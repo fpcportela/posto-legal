@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# post-commit — regenera as visões do .beads depois de cada commit.
+# Contrato: aiteam/docs/beads-schema.md §7.3.
+#
+# No meio de um rebase não faz nada: o post-rewrite regenera uma vez no fim,
+# em vez de uma vez por commit reaplicado. Cherry-pick regenera normalmente
+# (ele não chama o post-rewrite, então pular aqui deixaria a visão velha).
+
+. "$(dirname "$0")/_beads.sh" || exit 0
+
+beads_legacy && exit 0
+beads_in_rebase && exit 0
+beads_regenerate --quiet
+exit 0

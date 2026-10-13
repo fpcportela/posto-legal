@@ -1,0 +1,220 @@
+# deploy.yml.example — workflow de referência do rb-ai-team (AGENTS.md §CI/CD Mandate).
+# Copie para .github/workflows/deploy.yml no projeto consumidor, declare-o no
+# bloco deploy: do SPEC.md (workflow: e version_url:) e adapte SOMENTE o passo
+# "Deploy to VPS" e a URL do health check. O contrato fixo: gate humano antes
+# do deploy, versão conferida depois, tag deploy/ de rollback, e resiliência do
+# deploy (keepalive no ssh — AGENTS.md §CI/CD Mandate item 7).
+# aiteam/src/deploy-contract.test.ts e o doctor leem a sua cópia e conferem
+# como ela está ligada (rb-ai-team#32). É leitura estática do YAML: o que um
+# script roda no host, fora do workflow, eles não veem.
+#
+# VERSÃO E ROLLBACK — o que a sua adaptação não pode perder.
+#
+#   - O passo remoto faz CHECKOUT da ref recebida no input `ref`, já resolvida
+#     num SHA pelo checkout do runner. `git pull` NÃO é adaptação válida: ele só
+#     avança o branch corrente, pousa sempre em main, e re-rodar com uma tag
+#     antiga sobe main de novo, sem erro nenhum. O rollback deixa de existir.
+#   - O build recebe o SHA (APP_VERSION), derivado no host com git rev-parse
+#     HEAD depois do checkout, e não copiado do runner: assim o rótulo é o do
+#     commit em que o host de fato pousou. A app o expõe num endpoint de versão
+#     sem cache: JSON {"version": "<sha>"}, com o SHA inteiro ou abreviado (7+
+#     caracteres), servido com Cache-Control: no-store. O health check consulta
+#     esse endpoint até ele devolver o SHA recém-implantado, porque "responde
+#     200" não distingue "a versão nova subiu" de "a antiga nunca caiu". Se a
+#     versão antiga continua no ar ao fim da janela, o deploy FALHA.
+#   - Com o health check verde, o job `tag` (needs: deploy) cria e envia a tag
+#     deploy/<YYYYMMDD-HHMM>-<sha7>. Só ele tem permissions: contents: write;
+#     o workflow fica em contents: read, para o npm ci e os scripts de terceiros
+#     do build nunca rodarem com um token que escreve no repo.
+#     Rollback = re-rodar este workflow com a tag deploy/ anterior:
+#       git fetch --tags && git tag -l 'deploy/*' --sort=-creatordate
+#       gh workflow run deploy.yml -f ref=<tag deploy/ anterior> -f confirm=deploy
+#     Só deploy verificado ganha tag, então essa lista só tem versões que já
+#     estiveram no ar respondendo.
+#
+# GATE HUMANO — mudou em 2026-07-30. NÃO reintroduza um job de aprovação.
+#
+# O gate é o ASK one-shot do tier-guard, no IDE: `gh workflow run …deploy` casa
+# `ask_patterns` em .claude/tier-rules.json e dispara o prompt nativo de
+# aprovação. O humano aprova onde já está trabalhando; o workflow, quando
+# despacha, deploya direto.
+#
+# Por que NÃO existe mais um job de aprovação aqui:
+#   - Modo A (Environments + required reviewers) é EXCLUSIVO do GitHub
+#     Enterprise em repo privado. Não é limitação do Free que Pro ou Team
+#     resolvam — não adianta tentar.
+#   - Modo B (trstringer/manual-approval) segurava um runner fazendo polling
+#     numa issue. Custou 973 min em julho/2026 — 49% da cota mensal, ~1,4× o
+#     custo dos deploys que guardava (707 min) — e estourou a cota, derrubando
+#     a pipeline inteira. O playbook dizia que era grátis; era falso.
+#
+# ⚠️ SE SUA PIPELINE NÃO FOR GITHUB ACTIONS: registre seu comando de disparo em
+# `ask_patterns` (.claude/tier-rules.json). Comando não listado NÃO é negado por
+# padrão — classifica como Tier 1 e roda SEM PROMPT NENHUM. Com o gate de painel
+# removido, o ASK é a única linha; um `ask_patterns` incompleto significa deploy
+# de produção sem gate algum.
+#
+# Trade-off assumido (spec 2026-07-30 §4.1): o ASK é layer 2 — o agente é quem o
+# apresenta. Não há mais barreira que um agente confuso não atravesse sozinho.
+# Aceito para repo privado de autor único; REAVALIE ao adicionar colaboradores.
+#
+# Passo a passo completo (inclui como restringir a chave SSH de deploy via
+# forced-command, para que vazar o secret não vire shell root livre num host
+# compartilhado): aiteam/docs/cicd-deploy-gate-playbook.md
+
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag, branch ou SHA completo (40) a deployar (rollback = re-run com a tag deploy/ anterior)"
+        required: true
+        default: "main"
+      confirm:
+        description: 'Digite "deploy" para confirmar deploy de produção'
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+# Só leitura: o build roda npm ci e scripts de terceiros. Quem escreve — e só
+# a tag deploy/ — é o job `tag`, lá embaixo.
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # O SHA implantado, para o job `tag` marcar exatamente ele.
+    outputs:
+      sha: ${{ steps.version.outputs.sha }}
+    # `environment: production` continua como RÓTULO — dá a aba Deployments e o
+    # histórico por ambiente. NÃO é gate: required reviewers em repo privado é
+    # Enterprise-only.
+    environment: production
+    # Quebra-molas contra dispatch acidental pelo painel. Não é layer 3 (o
+    # agente pode digitá-lo) — é proteção contra engano do operador.
+    if: ${{ github.event.inputs.confirm == 'deploy' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+          persist-credentials: false
+
+      # A ref digitada no dispatch vira um SHA aqui, uma vez. Daqui para baixo
+      # só o SHA circula: o build o carimba, a VPS faz checkout dele, o health
+      # check o espera e a tag o marca. E o texto da ref nunca é interpolado
+      # em script (só chega por env:): um nome de ref pode conter ; | $ e
+      # crase, um SHA validado com ^[0-9a-f]{40}$ não.
+      - name: Resolve a versão
+        id: version
+        run: |
+          sha=$(git rev-parse HEAD)
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::git rev-parse devolveu '$sha', não um SHA"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          APP_VERSION: ${{ steps.version.outputs.sha }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to VPS (ADAPTE ESTE PASSO ao seu projeto)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          APP_VERSION: ${{ steps.version.outputs.sha }}
+        run: |
+          # Exemplo SSH + docker compose (Hostinger VPS). Troque a mecânica
+          # (rsync, docker context, API da Hostinger...), não o contrato: o host
+          # faz checkout do SHA, nunca `git pull`, e a versão do build da imagem
+          # (no compose: build.args: APP_VERSION: ${APP_VERSION}) sai do host:
+          # o `\$(git rev-parse HEAD)`, escapado para expandir lá, depois do
+          # checkout. Se o host pousar noutro commit, por qualquer idioma que
+          # a checagem estática não vê, o endpoint serve esse outro SHA e o
+          # health check abaixo reprova alto, em vez de aprovar um rótulo falso.
+          [[ "$APP_VERSION" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::APP_VERSION '$APP_VERSION' não é um SHA"; exit 1; }
+          mkdir -p ~/.ssh && echo "$VPS_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          # Keepalive é OBRIGATÓRIO (AGENTS.md §CI/CD Mandate, item 7): um build
+          # pesado pendurado na sessão SSH cai com "client_loop: send disconnect:
+          # Broken pipe" (exit 255) sob contenção de CPU num host compartilhado —
+          # e o passo falha DEPOIS de o build já ter rodado. 15s x 40 = ~10 min
+          # de tolerância. Se você builda NO host, leia também os outros bullets
+          # do item 7 (export duplicado e prune) — eles cortam a carga na origem.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=15 -o ServerAliveCountMax=40 -o TCPKeepAlive=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "cd /opt/app && git fetch --all --tags && git checkout --detach $APP_VERSION && APP_VERSION=\$(git rev-parse HEAD) docker compose up -d --build"
+
+      # Janela de 10 min: num host compartilhado, migração esperando lock e
+      # build lento são o caso normal (trabalhista, 2026-08-17). Ajuste a
+      # janela, nunca o critério — servir o SHA implantado.
+      - name: Health check — a versão servida é a implantada
+        env:
+          # ADAPTE: a mesma URL do deploy.version_url do SPEC.md.
+          VERSION_URL: https://SEU_DOMINIO/api/version
+          SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::SHA '$SHA' não é um SHA"; exit 1; }
+          # -L segue redirect (http→https, barra no fim); ?_=<agora> fura um
+          # cache no caminho que ignore o Cache-Control da requisição.
+          case "$VERSION_URL" in *\?*) sep='&' ;; *) sep='?' ;; esac
+          fim=$(( $(date +%s) + 600 ))
+          servida=""
+          while [ "$(date +%s)" -lt "$fim" ]; do
+            corpo=$(curl -fsSL --max-time 10 -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' "${VERSION_URL}${sep}_=$(date +%s)" || true)
+            # O primeiro "version": "<valor>", sem casar além das aspas dele. O
+            # `|| true` no grep: com shell: bash (pipefail), um corpo sem
+            # "version" — o 502 de quando a app ainda sobe — derrubaria o pipe
+            # e mataria o laço na primeira tentativa.
+            servida=$(printf '%s' "$corpo" | { grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' || true; } | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/' | tr 'A-F' 'a-f')
+            if [ "${#servida}" -ge 7 ] && [ "${SHA#"$servida"}" != "$SHA" ]; then
+              echo "no ar: $servida (implantado: $SHA)"; exit 0
+            fi
+            echo "servindo '${servida:-?}', esperado $SHA; nova tentativa em 15s"
+            sleep 15
+          done
+          echo "::error::$VERSION_URL ainda serve '${servida:-?}', não $SHA — a versão nova não entrou no ar. Rollback: re-rode com a tag deploy/ anterior (git tag -l 'deploy/*' --sort=-creatordate)."
+          exit 1
+
+  # Só deploy verificado ganha tag: este job só roda com o deploy (e o health
+  # check dele) verde. NÃO ponha if: always() aqui. Job separado para o write
+  # ficar só onde é usado: o checkout daqui não roda build nenhum.
+  tag:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.deploy.outputs.sha }}
+
+      # Anotada, não leve: numa tag leve o creatordate é a data do COMMIT, e o
+      # `--sort=-creatordate` do Release Loop poria um rollback (commit
+      # antigo) no fim da lista.
+      - name: Tag deploy/ — o ponto de rollback
+        env:
+          SHA: ${{ needs.deploy.outputs.sha }}
+          REF: ${{ github.event.inputs.ref }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::SHA '$SHA' não é um SHA"; exit 1; }
+          TAG="deploy/$(date -u +%Y%m%d-%H%M)-${SHA:0:7}"
+          # Re-run do mesmo SHA no mesmo minuto: a tag já existe. Apontando para
+          # este SHA, não há o que fazer; para outro, é erro. O ^{} é o commit
+          # de uma tag anotada; sem ele (tag leve), vale a própria linha.
+          remota=$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}" | sort -k2 | awk 'END { print $1 }')
+          if [ -n "$remota" ]; then
+            if [ "$remota" = "$SHA" ]; then echo "a tag $TAG já aponta para $SHA"; exit 0; fi
+            echo "::error::a tag $TAG já existe e aponta para $remota, não para $SHA"; exit 1
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "$TAG" -m "deploy de produção: $REF ($SHA)" "$SHA"
+          git push origin "refs/tags/$TAG"
+          echo "Tag de rollback: $TAG" >> "$GITHUB_STEP_SUMMARY"

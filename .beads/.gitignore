@@ -1,0 +1,9 @@
+# .beads — aiteam/docs/beads-schema.md §2: visões geradas e estado local ficam fora do git.
+/active.yaml
+/index.yaml
+/*.editado-*
+/*.tmp-*
+/*.corrupt-*
+/session.local.json
+/cost-log.json
+/session-log.ndjson

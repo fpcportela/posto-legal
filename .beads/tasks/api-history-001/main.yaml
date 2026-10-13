@@ -1,0 +1,11 @@
+title: "[auth] Recent work in POSTO LEGAL"
+description: "Banco online (Supabase): schema, login, rede compartilhada, eventos de uso e painel do administrador"
+related_files:
+  - "README.md"
+  - "prototipo/index.html"
+  - "supabase/schema.sql"
+created_at: "2026-10-08T13:16:13Z"
+entries:
+  - at: "2026-10-08T14:04:29Z"
+    status: "completed"
+    context_summary: "Bootstrapped from git history. Recent commits: Banco online (Supabase): schema, login, rede compartilhada, eventos de uso e painel do administrador; Protótipo do Posto Legal: abastecimentos, mapa, aviso por GPS e login"
