@@ -14,3 +14,5 @@ entries:
     status: "pending"
   - at: "2026-10-13T20:38:49Z"
     note: "Extrator dados/extrair-postos-anp.mjs: 45.762 postos da base ANP (out/2026) → dados/postos-anp.csv com nome (razão social; a base não tem nome fantasia), endereço completo, CNPJ, bandeira, município, UF e CEP (zero à esquerda restaurado em 2.706). CSVs fora do git. Falta geocodificar e importar no Supabase."
+  - at: "2026-10-13T21:09:02Z"
+    note: "Geocodificação por cruzamento com o OSM (dados/geocodificar-osm.mjs): 6.813 de 45.762 postos (14,9%) com lat/lng, limiar geo_score 80; precisão ~98% no teste cego (2.308 pares rua+número) e 15/16 no gabarito CNPJ do OSM. Melhores UFs: ES 41%, SC 37%; piores: AP, MA, DF (<3%). Próximo passo recomendado: CNEFE/IBGE (Censo 2022) para os demais, a custo zero; depois, coordenada pelo GPS dos usuários."

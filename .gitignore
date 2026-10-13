@@ -17,3 +17,6 @@ prototipo/index.backup-*.html
 
 # Bases de dados (ANP etc.): grandes e regeneráveis pelo script em dados/
 dados/*.csv
+
+# Dados do OSM (Overpass): grandes e regeneráveis
+dados/*.json
