@@ -402,6 +402,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     </div>
   </section>
   <div class="sheet" id="sheet" hidden><div class="card" id="sheetIn"></div></div>
+  <div class="modal-bg" id="renAsk" hidden role="dialog" aria-modal="true" aria-labelledby="renTit"><form class="card" id="renForm" novalidate>
+    <h2 id="renTit">Nome do posto</h2>
+    <p class="note" id="renRazao"></p>
+    <label>Nome fantasia (o que aparece na fachada)<input id="ren-nome" maxlength="60" autocomplete="off" placeholder="Ex.: Posto Camila"></label>
+    <p class="note">A troca vale para todos os usuários do Posto Legal. Deixe em branco para voltar à razão social.</p>
+    <div class="row"><button class="btn" type="submit">Salvar</button><button class="btn ghost" type="button" id="renCancel">Cancelar</button></div>
+  </form></div>
   <div class="modal-bg" id="gpsAsk" hidden role="dialog" aria-modal="true" aria-labelledby="gpsTit"><div class="card" id="gpsIn"></div></div>
 
   <!-- REDE -->
@@ -525,6 +532,10 @@ function buscaCidades(q,uf){
     .sort((a,b)=>(b.k.startsWith(q)-a.k.startsWith(q))||a.k.localeCompare(b.k)).slice(0,40);
 }
 function allPostos(){return S.demo?{...DEMO_POSTOS,...S.postos}:S.postos}
+// Nome exibido: o nome fantasia que os usuários deram; senão o nome cadastrado (na base da ANP, a razão social).
+const nomeP=p=>(p&&(p.nomeFantasia||p.nome))||"";
+const subP=p=>[p.nomeFantasia&&p.nomeFantasia!==p.nome?"Razão social: "+p.nome:"",p.bandeira,local(p),p.endereco].filter(Boolean).join(" · ");
+const renBtn=(id,p)=>p.demo?"":`<button class="btn ghost small" type="button" data-ren="${id}">Renomear</button>`;
 function allItems(){const out=[];const src=S.demo?{...S.pub,...DEMO_PUB}:S.pub;for(const [uid,items] of Object.entries(src))for(const it of items||[])out.push({...it,uid});return out}
 
 /* ---------- agregação da rede ---------- */
@@ -620,7 +631,7 @@ async function carregarPerfil(uid){const {data,error}=await sb.from("profiles").
 async function carregarRede(){
   const [p,a]=await Promise.all([sb.from("postos").select("*"),sb.from("avaliacoes").select("*").order("data").limit(10000)]);
   if(p.error)throw p.error;if(a.error)throw a.error;
-  S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
+  S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,nomeFantasia:r.nome_fantasia||"",bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
   S.pub={};S.pubNome={};
   for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas||undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
 }
@@ -685,6 +696,13 @@ async function addPosto(p){
   if(db){const ref=await db.collection("postos").add(p);S.postos[ref.id]=p;return ref.id}
   const id="p"+Date.now();S.postos[id]=p;lsSave();return id;
 }
+// Renomear: qualquer usuário confirmado troca o nome fantasia; a razão social (nome) não muda.
+// No Supabase passa pela função renomear_posto, que valida e registra quem trocou em eventos.
+async function renomearPosto(id,nome){
+  if(sb){const {data,error}=await sb.rpc("renomear_posto",{p_id:id,p_nome:nome});if(error)throw error;S.postos[id]={...S.postos[id],nomeFantasia:data||""};return}
+  if(db)await db.collection("postos").doc(id).update({nomeFantasia:nome});
+  S.postos[id]={...S.postos[id],nomeFantasia:nome};if(!db)lsSave();track("posto_renomeado",{apagou:!nome});
+}
 async function saveGar(){if(sb){const {error}=await sb.from("garagem").upsert({user_id:S.uid,dados:S.gar,atualizado_em:new Date().toISOString()});if(error)throw error;return}if(db)await db.doc(`data/users/${S.uid}/garagem`).set(S.gar);else lsSave()}
 async function saveAbast(a){if(sb){const {error}=await sb.from("abastecimentos").upsert(abLinha(a));if(error)throw error;S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);return}if(db)await db.doc(`data/users/${S.uid}/${a.id}`).set(a);else{S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);lsSave()}}
 async function savePub(items,ids){const nome=primeiroNome();
@@ -723,16 +741,16 @@ async function loadNames(){
 /* ---------- ABASTECER ---------- */
 function renderPostoList(){
   const q=$("#busca").value.trim().toLowerCase(),P=allPostos();
-  const ids=Object.keys(P).filter(id=>!q||[P[id].nome,P[id].bandeira,local(P[id])].join(" ").toLowerCase().includes(q));
-  ids.sort((a,b)=>P[a].nome.localeCompare(P[b].nome));
+  const ids=Object.keys(P).filter(id=>!q||[P[id].nome,P[id].nomeFantasia,P[id].bandeira,local(P[id])].join(" ").toLowerCase().includes(q));
+  ids.sort((a,b)=>nomeP(P[a]).localeCompare(nomeP(P[b])));
   $("#postoList").innerHTML=ids.length?ids.map(id=>{const st=stats(id),p=P[id];
-    return `<button class="posto" data-id="${id}"><span class="n">${esc(p.nome)} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} (${st.n})</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
+    return `<button class="posto" data-id="${id}"><span class="n">${esc(nomeP(p))} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} (${st.n})</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
     :`<div class="empty"><span>${Object.keys(P).length?"Nenhum posto encontrado.":"Nenhum posto cadastrado na rede ainda."}</span><span class="note">Cadastre o posto em que você está para registrar o abastecimento.</span></div>`;
 }
 function selectPosto(id){
   S.sel=id;const p=allPostos()[id];if(!p)return;
   $("#pickCard").hidden=true;$("#arrive").hidden=true;$("#chosenCard").hidden=false;$("#abForm").hidden=false;
-  $("#chNome").textContent=p.nome;$("#chSub").textContent=[p.bandeira,local(p),p.endereco].filter(Boolean).join(" · ");
+  $("#chNome").textContent=nomeP(p);$("#chSub").textContent=subP(p);
   renderAlert();prefillVeic();updateCalc();
 }
 function renderAlert(){
@@ -801,14 +819,14 @@ function renderRede(){
   $("#demoBox").innerHTML=!real||S.demo?`<div class="demo"><span>${S.demo?"Mostrando postos e avaliações <b>de exemplo</b> para você ver como a rede funciona. Eles não são gravados.":"A rede ainda não tem postos. Quer ver um exemplo de como ela fica com avaliações?"}</span><button class="btn ghost small" id="demoT">${S.demo?"Esconder exemplo":"Ver exemplo"}</button></div>`:"";
   const dt=$("#demoT");if(dt)dt.onclick=()=>{S.demo=!S.demo;renderAll()};
   $("#rank").innerHTML=list.length?list.map(({id,p,st})=>{const kml=st.kml.length?st.kml.reduce((a,i)=>a+i.kmL,0)/st.kml.length:null;
-    return `<button class="rk" data-id="${id}"><span class="n">${esc(p.nome)} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}${kml?` · rendimento relatado ${num(kml)} km/l`:""}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} · ${st.n} aval.</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
+    return `<button class="rk" data-id="${id}"><span class="n">${esc(nomeP(p))} ${p.demo?'<span class="tag">Exemplo</span>':""}</span><span class="s">${esc(p.bandeira||"")} · ${esc(local(p))}${kml?` · rendimento relatado ${num(kml)} km/l`:""}</span><span class="r">${st.n?starsHtml(st.media)+`<div class="score">${num(st.media)} · ${st.n} aval.</div>`:'<span class="note">sem nota</span>'}</span></button>`}).join("")
     :`<div class="empty card"><span>Nenhum posto na rede ainda.</span><span class="note">Os postos aparecem aqui assim que alguém registra um abastecimento.</span></div>`;
 }
 /* navegação externa: Waze e Google Maps (abrem o app no celular, ou o site) */
 function navHtml(id,p){
   const k=coords(id,p),end=[p.endereco,local(p)].filter(Boolean).join(", ");
   if(!k&&!end)return "";
-  const q=k?k.map(n=>(+n).toFixed(6)).join(","):encodeURIComponent(p.nome+", "+end);
+  const q=k?k.map(n=>(+n).toFixed(6)).join(","):encodeURIComponent(nomeP(p)+", "+end);
   const wz=k?`https://waze.com/ul?ll=${q}&navigate=yes`:`https://waze.com/ul?q=${q}&navigate=yes`;
   const gm=`https://www.google.com/maps/dir/?api=1&destination=${q}`;
   return `<div class="navgo"><h3>Ir até o posto</h3><div class="row"><a class="btn sec small" href="${wz}" target="_blank" rel="noopener" data-nav="waze"><svg viewBox="0 0 24 24"><path d="M5 17.5C3.5 16.4 3 14.6 3 13a9 9 0 0 1 18 0c0 3.9-3 7-7 7h-3"/><circle cx="8" cy="20" r="1.6"/><circle cx="16.5" cy="20" r="1.6"/><path d="M9.5 11h.01M14.5 11h.01M9.5 14.5c1.4 1 3.6 1 5 0"/></svg>Waze</a><a class="btn sec small" href="${gm}" target="_blank" rel="noopener" data-nav="maps"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Google Maps</a></div></div>`;
@@ -820,8 +838,8 @@ function renderDetail(id){
   const kml=st.kml.slice().sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6);
   const reviews=st.its.filter(i=>i.estrelas).sort((a,b)=>(b.avaliadoEm||b.data).localeCompare(a.avaliadoEm||a.data)).slice(0,20);
   $("#detail").hidden=false;
-  $("#detail").innerHTML=`<div class="row between"><h2>${esc(p.nome)}</h2><button class="btn ghost small" id="detClose">Fechar</button></div>
-    <p class="note">${esc([p.bandeira,local(p),p.endereco].filter(Boolean).join(" · "))}</p>
+  $("#detail").innerHTML=`<div class="row between"><h2>${esc(nomeP(p))}</h2><div class="row">${renBtn(id,p)}<button class="btn ghost small" id="detClose">Fechar</button></div></div>
+    <p class="note">${esc(subP(p))}</p>
     ${navHtml(id,p)}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="summary" id="detSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="detIA">Resumir comentários com IA</button>':""}</div>
@@ -880,7 +898,7 @@ function renderMapa(){
     const {st,r,pr}=infoPosto(id);
     if(M.soComb&&!pr)continue;n++;
     const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}"><span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
-    L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:p.nome,zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
+    L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:nomeP(p),zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
   }
   $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span>`;
   $("#mapMsg").textContent=`${n} posto(s) no mapa, com preço de ${comb}.`+(semLoc?` ${semLoc} posto(s) sem localização não aparecem.`:"")+" Toque num ponto vazio do mapa para cadastrar um posto ali.";
@@ -891,7 +909,7 @@ function renderMapa(){
 function abrirPosto(id){
   const p=allPostos()[id];if(!p)return;
   M.alvo=id;const {st,r,comb,pr,kml,res}=infoPosto(id),k=coords(id,p);
-  $("#sheetIn").innerHTML=`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div><h2>${esc(p.nome)} ${p.demo?'<span class="tag">Exemplo</span>':""}</h2><p class="note">${esc([p.bandeira,local(p),p.endereco].filter(Boolean).join(" · "))}${M.me&&k?" · a "+fmtDist(distM(M.me,k)):""}</p></div><button class="btn ghost small" id="shClose">Fechar</button></div>
+  $("#sheetIn").innerHTML=`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div><h2>${esc(nomeP(p))} ${p.demo?'<span class="tag">Exemplo</span>':""}</h2><p class="note">${esc(subP(p))}${M.me&&k?" · a "+fmtDist(distM(M.me,k)):""}</p></div><div class="row" style="flex-wrap:nowrap">${renBtn(id,p)}<button class="btn ghost small" id="shClose">Fechar</button></div></div>
     <div class="readout">
       <div class="metric hl"><div class="k">Nota</div><div class="v">${st.n?num(st.media):"—"}</div><div class="note">${st.n} avaliação(ões)</div></div>
       <div class="metric"><div class="k">${esc(comb)}</div><div class="v">${pr?brl(pr.preco):"—"}</div><div class="note">${pr?"relatado em "+fdata(pr.data):"sem preço relatado"}</div></div>
@@ -965,7 +983,7 @@ function perguntar(id,simulado){
   const {st,r,comb,pr,res}=infoPosto(id),v=veicMapa();
   const destaque=[...res.elogios.slice(0,1).map(x=>["pos","Elogio",x]),...res.reclamacoes.slice(0,1).map(x=>["neg","Reclamação",x])];
   $("#gpsIn").innerHTML=`<h3><span class="pulse" style="background:var(--brand)"></span>${simulado?"Simulação: você parou num posto":"Você parou num posto"}</h3>
-    <h2 id="gpsTit">Vai abastecer no ${esc(p.nome)}?</h2>
+    <h2 id="gpsTit">Vai abastecer no ${esc(nomeP(p))}?</h2>
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brl(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
       ${destaque.length?`<div class="summary">${destaque.map(([c,t,x])=>`<div class="${c}"><b>${t}</b>${esc(x)}</div>`).join("")}</div>`:""}</div>
@@ -1179,7 +1197,7 @@ $("#abForm").onsubmit=async e=>{
   if(c.last&&!S.stars){toast(`Dê uma nota de 1 a 5 estrelas para ${c.last.postoNome}`);$("#rateCard").scrollIntoView({block:"center"});return}
   const v=S.gar.veiculos.find(x=>x.id===c.vid),now=new Date().toISOString(),id="ab-"+Date.now();
   const comb=$("#comb").value,obs=$("#obs").value.trim();
-  const a={id,veiculoId:c.vid,postoId:S.sel,postoNome:p.nome,km:c.km,comb,preco:c.preco,total:c.total,litros:Math.round(c.litros*1000)/1000,cheio:c.cheio,data:now};
+  const a={id,veiculoId:c.vid,postoId:S.sel,postoNome:nomeP(p),km:c.km,comb,preco:c.preco,total:c.total,litros:Math.round(c.litros*1000)/1000,cheio:c.cheio,data:now};
   if(c.media)a.media=Math.round(c.media*10)/10;
   // a nota e a média deste abastecimento pertencem ao posto do abastecimento anterior
   const items=(S.pub[S.uid]||[]).map(i=>({...i}));
@@ -1210,9 +1228,17 @@ $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config
   try{await saveGar()}catch(e){}
   track("gps_aviso",{ligado:on});
   if(on){startGps(false);toast("Aviso por GPS ligado")}else{if(M.watch!=null)navigator.geolocation.clearWatch(M.watch);M.watch=null;toast("Aviso por GPS desligado")}};
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
 $("#hVeic").onchange=renderHist;
+function abrirRenomear(id){const p=allPostos()[id];if(!p||p.demo)return;S.ren=id;$("#renRazao").textContent="Razão social: "+p.nome;$("#ren-nome").value=p.nomeFantasia||"";$("#renAsk").hidden=false;$("#ren-nome").focus()}
+function fecharRenomear(){$("#renAsk").hidden=true;S.ren=null}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-ren]");if(b){e.stopPropagation();abrirRenomear(b.dataset.ren)}});
+$("#renCancel").onclick=fecharRenomear;
+$("#renAsk").onclick=e=>{if(e.target.id==="renAsk")fecharRenomear()};
+$("#renForm").onsubmit=async e=>{e.preventDefault();const id=S.ren,nome=$("#ren-nome").value.replace(/\s+/g," ").trim();
+  if(nome&&nome.length<2){toast("Use pelo menos 2 caracteres");return}
+  try{await renomearPosto(id,nome);fecharRenomear();toast(nome?"Posto renomeado":"Voltou para a razão social");renderAll();const p=allPostos()[id];if(S.sel===id&&p){$("#chNome").textContent=nomeP(p);$("#chSub").textContent=subP(p)}}catch(err){toast("Não foi possível renomear: "+(err.message||err.code))}};
 $("#vAddBtn").onclick=()=>{$("#vForm").hidden=false;$("#vAddBtn").hidden=true;$("#v-modelo").focus()};
 $("#vCancel").onclick=()=>{$("#vForm").reset();$("#vForm").hidden=true;$("#vAddBtn").hidden=false};
 $("#vForm").onsubmit=async e=>{e.preventDefault();const modelo=$("#v-modelo").value.trim();if(!modelo){toast("Informe o modelo");return}

@@ -75,6 +75,10 @@ create table if not exists public.postos (
   criado_por uuid default auth.uid() references auth.users(id) on delete set null,
   criado_em timestamptz not null default now()
 );
+-- nome = nome cadastrado (na base da ANP, a razão social). nome_fantasia = o nome que os
+-- usuários dão ao posto; o app mostra ele quando existe. Qualquer usuário confirmado
+-- troca por renomear_posto (mais abaixo), que registra a troca em eventos.
+alter table public.postos add column if not exists nome_fantasia text;
 
 -- ---------- garagem (veículos e configuração dos alertas) ----------
 create table if not exists public.garagem (
@@ -183,6 +187,33 @@ grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on public.profiles, public.postos, public.garagem, public.abastecimentos, public.avaliacoes to authenticated;
 grant insert on public.eventos to anon, authenticated;
 grant select on public.eventos to authenticated;
+
+-- ---------- renomear posto (nome fantasia) ----------
+-- Qualquer usuário confirmado pode dar ao posto o nome da fachada; a razão social (nome)
+-- fica intacta. Vazio volta para a razão social. Cada troca fica em eventos (de → para),
+-- para o administrador desfazer abuso.
+create or replace function public.renomear_posto(p_id uuid, p_nome text)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v text := nullif(btrim(regexp_replace(coalesce(p_nome, ''), '\s+', ' ', 'g')), '');
+  antigo text;
+begin
+  if not exists (select 1 from public.profiles where id = auth.uid() and status = 'confirmado') then
+    raise exception 'Só contas confirmadas podem renomear postos';
+  end if;
+  if v is not null and char_length(v) not between 2 and 60 then
+    raise exception 'O nome deve ter de 2 a 60 caracteres';
+  end if;
+  select nome_fantasia into antigo from public.postos where id = p_id for update;
+  if not found then raise exception 'Posto não encontrado'; end if;
+  update public.postos set nome_fantasia = v where id = p_id;
+  insert into public.eventos (user_id, tipo, dados)
+    values (auth.uid(), 'posto_renomeado', jsonb_build_object('posto_id', p_id, 'de', antigo, 'para', v));
+  return v;
+end
+$$;
+revoke execute on function public.renomear_posto(uuid, text) from public, anon;
+grant execute on function public.renomear_posto(uuid, text) to authenticated;
 
 -- ---------- visões para análise (só administradores enxergam linhas) ----------
 create or replace view public.uso_por_dia with (security_invoker = on) as
