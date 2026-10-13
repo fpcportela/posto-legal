@@ -52,6 +52,8 @@ O cadastro é obrigatório: o app só libera as abas, o mapa e o aviso por GPS d
 ### Regra da média
 É o método do tanque cheio: km/l = (km atual − km anterior) ÷ litros do abastecimento atual. Só vale quando o tanque foi completado nos dois abastecimentos. A média é atribuída ao posto **anterior**, porque foi o combustível dele que rodou esses km.
 
+No Histórico e nos "Últimos abastecimentos" do Painel, tocar num abastecimento abre a edição (data, km, combustível, valor do litro, litros, total, tanque cheio). Data e km precisam ficar entre o abastecimento anterior e o seguinte do mesmo veículo; ao salvar, a média deste e a do seguinte são recalculadas, assim como o km/l e o preço enviados à rede.
+
 ### Regra da avaliação
 O posto é avaliado (estrelas + comentário) sempre no abastecimento **seguinte** do mesmo veículo, depois de rodar com o combustível dele. No primeiro abastecimento de um veículo não há avaliação. A nota é obrigatória a partir do segundo.
 

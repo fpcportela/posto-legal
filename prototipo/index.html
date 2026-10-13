@@ -162,6 +162,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ab .r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .ab .s{font-size:.8rem;color:var(--muted)}
 .ab .dest{color:var(--brand);font-weight:700}
+.ab[data-ab]{cursor:pointer}
+.ab[data-ab]:hover,.ab[data-ab]:focus-visible{border-color:var(--line2);background:var(--surface-2,var(--surface))}
 .tq{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px 2px 6px;border:1px solid #5a3f12;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;vertical-align:2px;white-space:nowrap}
 .susp{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px 2px 6px;border:1px solid rgba(248,113,113,.45);border-radius:999px;background:var(--bad-soft);color:var(--bad);font-family:var(--f-mono);font-size:.68rem;font-weight:600;letter-spacing:.04em;vertical-align:2px;white-space:nowrap;cursor:pointer}
 .susp svg,.btn.warn svg,.susp-box svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -445,6 +447,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <label>Descreva o motivo da suspeita<textarea id="susp-motivo" maxlength="500" placeholder="Ex.: o tanque tem 50 L e a bomba marcou 58 L. Pedi para aferir e o frentista recusou."></textarea></label>
     <p class="note">Seu relato fica visível para todos os motoristas, com seu primeiro nome. Conte só o que você viu, sem ofensas.</p>
     <div class="row"><button class="btn" type="submit">Marcar suspeita</button><button class="btn ghost" type="button" id="suspCancel">Cancelar</button></div>
+  </form></div>
+  <div class="modal-bg" id="abEdit" hidden role="dialog" aria-modal="true" aria-labelledby="abEdTit"><form class="card" id="abEdForm" novalidate>
+    <h2 id="abEdTit">Editar abastecimento</h2>
+    <p class="note" id="abEdPosto"></p>
+    <div class="two"><label>Data<input type="date" id="ed-data"></label><label>Quilometragem (km)<input type="number" id="ed-km" inputmode="numeric" min="0" step="1"></label></div>
+    <div class="two"><label>Combustível<select id="ed-comb"></select></label><label>Valor do litro (R$)<input type="text" class="money-ed" id="ed-preco" inputmode="numeric" autocomplete="off"></label></div>
+    <div class="two"><label>Litros<input type="text" class="money-ed" id="ed-litros" inputmode="numeric" autocomplete="off"></label><label>Total pago (R$)<input type="text" class="money-ed" id="ed-total" inputmode="numeric" autocomplete="off"></label></div>
+    <label class="check"><input type="checkbox" id="ed-cheio">Completei o tanque</label>
+    <p class="note">Ao salvar, a média deste abastecimento e a do seguinte são recalculadas.</p>
+    <div class="row"><button class="btn" type="submit" id="abEdSalvar">Salvar alterações</button><button class="btn ghost" type="button" id="abEdCancel">Cancelar</button></div>
   </form></div>
   <div class="modal-bg" id="suspVer" hidden role="dialog" aria-modal="true" aria-labelledby="suspVerTit"><div class="card" id="suspVerIn"></div></div>
   <div class="modal-bg" id="gpsAsk" hidden role="dialog" aria-modal="true" aria-labelledby="gpsTit"><div class="card" id="gpsIn"></div></div>
@@ -858,7 +870,7 @@ function selectPosto(id){
   if(S.sel!==id){S.suspPend=null;pintaSuspPend()} // a suspeita marcada vale só para o posto em que foi marcada
   S.sel=id;const p=allPostos()[id];if(!p)return;
   $("#pickCard").hidden=true;$("#arrive").hidden=true;$("#chosenCard").hidden=false;$("#abForm").hidden=false;
-  $("#chNome").textContent=nomeP(id,p);$("#chSub").textContent=subP(id,p);
+  $("#chNome").innerHTML=esc(nomeP(id,p))+suspTag(id);$("#chSub").textContent=subP(id,p);
   renderAlert();prefillVeic();updateCalc();
 }
 function renderAlert(){
@@ -903,7 +915,7 @@ function calc(){
 function updateRateCard(c){
   const has=!!c.last&&c.vid!=="__novo";
   $("#rateCard").hidden=!has;$("#primeiraVez").hidden=has||!c.vid||c.vid==="__novo";
-  if(has){$("#rtNome").textContent=c.last.postoNome;
+  if(has){$("#rtNome").innerHTML=esc(c.last.postoNome)+suspTag(c.last.postoId);
     $("#rtSub").textContent=`Abastecido em ${fdata(c.last.data)} · ${c.last.comb} a ${brl(c.last.preco)}/L`+(c.media?` · rendeu ${num(c.media)} km/l`:"");}
 }
 function updateCalc(){
@@ -1133,7 +1145,7 @@ function renderHist(){
   $("#hKpis").innerHTML=`<div class="metric"><div class="k">Abastecimentos</div><div class="v">${list.length}</div></div><div class="metric"><div class="k">Total gasto</div><div class="v">${brl(gasto)}</div></div><div class="metric hl"><div class="k">Média geral</div><div class="v">${mediaG?num(mediaG)+" km/l":"—"}</div></div>`;
   const {rod,med}=consumoPorAbast();
   $("#hist").innerHTML=list.length?list.map(a=>{const vv=v.find(x=>x.id===a.veiculoId);
-    return `<div class="ab"><div><b>${esc(a.postoNome)}</b>${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
+    return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div><b>${esc(a.postoNome)}</b>${suspTag(a.postoId)}${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
     :S.mine.length?'<div class="empty card"><span>Nenhum abastecimento neste período.</span><span class="note">Escolha outro período ou outro veículo.</span></div>'
     :'<div class="empty card"><span>Nenhum abastecimento registrado.</span><span class="note">Use a aba Abastecer quando parar no posto.</span></div>';
 }
@@ -1161,16 +1173,18 @@ function renderPainel(){
   const st=(ic,k,val,un)=>`<div class="stat"><div class="k"><svg viewBox="0 0 24 24">${IC[ic]}</svg>${k}</div><div class="v">${val}${un&&val!=="—"?`<small>${un}</small>`:""}</div></div>`;
   $("#pStats").innerHTML=st("bomba","Abastecimentos",ab.length)+st("gota","Litros totais",ab.length?num(litros,1):"—","L")+st("estrela","Nota média",nota?num(nota,1):"—","/5")+st("sobe","Consumo médio",cons?num(cons,1):"—","km/L");
   const pend=v.map(x=>({x,a:lastAbast(x.id)})).filter(o=>o.a);
-  $("#pPend").innerHTML=pend.map(({x,a})=>`<div class="card pend"><h3>Aguardando avaliação</h3><div class="t">${esc(a.postoNome)} — ${esc(a.comb)}</div><p class="note">${v.length>1?esc(x.modelo)+" · ":""}Avalie no próximo abastecimento para calcular consumo e qualidade.</p></div>`).join("");
+  $("#pPend").innerHTML=pend.map(({x,a})=>`<div class="card pend"><h3>Aguardando avaliação</h3><div class="t">${esc(a.postoNome)} — ${esc(a.comb)}${suspTag(a.postoId)}</div><p class="note">${v.length>1?esc(x.modelo)+" · ":""}Avalie no próximo abastecimento para calcular consumo e qualidade.</p></div>`).join("");
   const ult=[...ab].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,3);
   const {med}=consumoPorAbast();
-  $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>`<div class="ab"><div><b>${esc(a.postoNome)}</b><div class="s">${fdata(a.data)} · ${esc(a.comb)} · ${num(a.litros,2)} L</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}</div></div>`).join("")
+  $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>`<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div><b>${esc(a.postoNome)}</b>${suspTag(a.postoId)}<div class="s">${fdata(a.data)} · ${esc(a.comb)} · ${num(a.litros,2)} L</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}</div></div>`).join("")
     :'<div class="empty card"><span>Nenhum abastecimento ainda.</span><span class="note">Toque em “Novo abastecimento” quando parar no posto.</span></div>';
 }
 $("#pVeic").onclick=()=>{show("garagem");$("#vAddBtn").click()};
 $("#pNovo").onclick=()=>show("abastecer");
 $("#pRank").onclick=()=>show("rede");
-$("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b)show(b.dataset.go)};
+$("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b){show(b.dataset.go);return}const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
+$("#hist").onclick=e=>{const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
+["#hist","#pUlt"].forEach(s=>$(s).addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches("[data-ab]")){e.preventDefault();abrirEdicao(e.target.dataset.ab)}}));
 
 $("#busca").oninput=()=>{const q=$("#busca").value.trim();if(q.length>=3)carregarAnpUF([...new Set(buscaCidades(q).slice(0,5).map(c=>c.uf))]);renderPostoList()};
 $("#postoList").onclick=e=>{const b=e.target.closest(".posto");if(b)selectPosto(b.dataset.id)};
@@ -1387,7 +1401,7 @@ $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config
   try{await saveGar()}catch(e){}
   track("gps_aviso",{ligado:on});
   if(on){startGps(false);toast("Aviso por GPS ligado")}else{if(M.watch!=null)navigator.geolocation.clearWatch(M.watch);M.watch=null;toast("Aviso por GPS desligado")}};
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#suspVer").hidden)$("#suspVer").hidden=true;else if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#abEdit").hidden)fecharEdicao();else if(!$("#suspVer").hidden)$("#suspVer").hidden=true;else if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
 $("#hVeic").onchange=renderHist;$("#hPer").onchange=renderHist;$("#hDe").onchange=renderHist;$("#hAte").onchange=renderHist;
 /* suspeita de fraude: marcada no abastecimento, registrada no posto atual ao salvar */
@@ -1409,6 +1423,53 @@ $("#suspCancel").onclick=fecharSuspeita;$("#suspAsk").onclick=e=>{if(e.target.id
 $("#suspForm").onsubmit=e=>{e.preventDefault();const motivo=$("#susp-motivo").value.replace(/\s+/g," ").trim();
   if(motivo.length<10){toast("Descreva o motivo (pelo menos 10 caracteres)");$("#susp-motivo").focus();return}
   S.suspPend={categoria:$("#susp-cat").value,motivo};fecharSuspeita();pintaSuspPend();toast("Suspeita marcada. Ela será registrada ao salvar o abastecimento.")};
+/* editar abastecimento (Histórico e Painel): data e km ficam entre o anterior e o seguinte do mesmo
+   veículo; a média deste e a do seguinte são recalculadas, e o que foi para a rede (preço, km/l) também. */
+const isoDia=iso=>{const d=new Date(iso);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+function vizinhos(a){const seq=S.mine.filter(x=>x.veiculoId===a.veiculoId).sort((x,y)=>x.data.localeCompare(y.data)),i=seq.findIndex(x=>x.id===a.id);return {prev:seq[i-1]||null,next:seq[i+1]||null}}
+function abrirEdicao(abId){
+  const a=S.mine.find(x=>x.id===abId);if(!a)return;S.edAb=abId;
+  const v=(S.gar.veiculos||[]).find(x=>x.id===a.veiculoId);
+  $("#abEdPosto").textContent=[a.postoNome,v?v.modelo:"",fdata(a.data)].filter(Boolean).join(" · ");
+  $("#ed-comb").innerHTML=[...new Set([...COMBS,a.comb].filter(Boolean))].map(c=>`<option>${esc(c)}</option>`).join("");$("#ed-comb").value=a.comb;
+  $("#ed-data").value=isoDia(a.data);$("#ed-km").value=a.km;$("#ed-preco").value=fmtBR(a.preco);$("#ed-litros").value=fmtBR(a.litros);$("#ed-total").value=fmtBR(a.total);$("#ed-cheio").checked=!!a.cheio;
+  $("#abEdit").hidden=false;$("#ed-km").focus();
+}
+function fecharEdicao(){$("#abEdit").hidden=true;S.edAb=null}
+$("#abEdCancel").onclick=fecharEdicao;$("#abEdit").onclick=e=>{if(e.target.id==="abEdit")fecharEdicao()};
+// valor do litro × litros = total (o último digitado entre litros e total manda)
+document.querySelectorAll("input.money-ed").forEach(el=>el.addEventListener("input",()=>{maskMoney(el);
+  const p=parseBR($("#ed-preco").value),l=parseBR($("#ed-litros").value),t=parseBR($("#ed-total").value),set=(x,n)=>{x.value=n==null?"":fmtBR(Math.round(n*100)/100)};
+  if(el.id==="ed-litros"){S.edUlt="litros";if(p)set($("#ed-total"),l?p*l:null)}
+  else if(el.id==="ed-total"){S.edUlt="total";if(p)set($("#ed-litros"),t?t/p:null)}
+  else if(p){if(S.edUlt==="total"&&t)set($("#ed-litros"),t/p);else if(l)set($("#ed-total"),p*l)}}));
+$("#abEdForm").onsubmit=async e=>{e.preventDefault();
+  const a=S.mine.find(x=>x.id===S.edAb);if(!a)return fecharEdicao();
+  const {prev,next}=vizinhos(a),km=parseFloat($("#ed-km").value),preco=parseBR($("#ed-preco").value),litros=parseBR($("#ed-litros").value),total=parseBR($("#ed-total").value),cheio=$("#ed-cheio").checked;
+  const dia=$("#ed-data").value,orig=new Date(a.data),nd=dia?new Date(`${dia}T${String(orig.getHours()).padStart(2,"0")}:${String(orig.getMinutes()).padStart(2,"0")}:00`):null;
+  if(!nd||isNaN(nd)){toast("Informe a data");return}
+  if(nd>new Date()){toast("A data não pode ser no futuro");return}
+  if(prev&&nd.toISOString()<=prev.data){toast(`A data deve ser depois do abastecimento anterior (${fdata(prev.data)})`);return}
+  if(next&&nd.toISOString()>=next.data){toast(`A data deve ser antes do abastecimento seguinte (${fdata(next.data)})`);return}
+  if(!(km>0)){toast("Informe a quilometragem");return}
+  if(prev&&km<=prev.km){toast(`A quilometragem deve ser maior que ${prev.km.toLocaleString("pt-BR")} km (abastecimento anterior)`);return}
+  if(next&&km>=next.km){toast(`A quilometragem deve ser menor que ${next.km.toLocaleString("pt-BR")} km (abastecimento seguinte)`);return}
+  if(!preco||!litros||!total){toast("Preencha valor do litro, litros e total pago");return}
+  const med=(x,ant)=>ant&&x.cheio&&ant.cheio&&x.km>ant.km&&x.litros?Math.round((x.km-ant.km)/x.litros*10)/10:null;
+  const a2={...a,data:nd.toISOString(),km,comb:$("#ed-comb").value,preco,litros:Math.round(litros*1000)/1000,total,cheio};delete a2.media;
+  const ma=med(a2,prev);if(ma)a2.media=ma;
+  let next2=null;if(next){next2={...next};delete next2.media;const mn=med(next2,a2);if(mn)next2.media=mn}
+  // kmL de um abastecimento = média medida no seguinte (combustível deste posto)
+  if(next2&&next2.media)a2.kmL=next2.media;else delete a2.kmL;
+  let prev2=null;if(prev){prev2={...prev};if(a2.media)prev2.kmL=a2.media;else delete prev2.kmL}
+  const items=(S.pub[S.uid]||[]).map(i=>({...i})),ids=[];
+  const it=items.find(i=>i.id===a.id);if(it){it.comb=a2.comb;it.preco=preco;it.data=a2.data;if(a2.kmL)it.kmL=a2.kmL;else delete it.kmL;ids.push(it.id)}
+  const ip=prev&&items.find(i=>i.id===prev.id);if(ip){if(a2.media)ip.kmL=a2.media;else delete ip.kmL;ids.push(ip.id)}
+  $("#abEdSalvar").disabled=true;
+  try{await saveAbast(a2);if(next2)await saveAbast(next2);if(prev2)await saveAbast(prev2);if(ids.length)await savePub(items.slice(-400),ids);
+    track("abastecimento_editado",{});fecharEdicao();toast("Abastecimento atualizado");renderAll()}
+  catch(err){toast("Não foi possível salvar: "+(err.message||err.code))}
+  finally{$("#abEdSalvar").disabled=false}};
 function abrirRenomear(id){const p=allPostos()[id];if(!p)return;S.ren=id;$("#renRazao").textContent="Razão social: "+p.nome;$("#ren-nome").value=apelido(id);$("#ren-nome").placeholder=p.nomeOsm?"Ex.: "+p.nomeOsm:"Ex.: Posto Camila";$("#renAsk").hidden=false;$("#ren-nome").focus()}
 function fecharRenomear(){$("#renAsk").hidden=true;S.ren=null}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-ren]");if(b){e.stopPropagation();abrirRenomear(b.dataset.ren)}});
@@ -1416,7 +1477,7 @@ $("#renCancel").onclick=fecharRenomear;
 $("#renAsk").onclick=e=>{if(e.target.id==="renAsk")fecharRenomear()};
 $("#renForm").onsubmit=async e=>{e.preventDefault();const id=S.ren,nome=$("#ren-nome").value.replace(/\s+/g," ").trim();
   if(nome&&nome.length<2){toast("Use pelo menos 2 caracteres");return}
-  try{await renomearPosto(id,nome);fecharRenomear();toast(nome?"Posto renomeado":"Voltou para a razão social");renderAll();const p=allPostos()[id];if(S.sel===id&&p){$("#chNome").textContent=nomeP(id,p);$("#chSub").textContent=subP(id,p)}}catch(err){toast("Não foi possível renomear: "+(err.message||err.code))}};
+  try{await renomearPosto(id,nome);fecharRenomear();toast(nome?"Posto renomeado":"Voltou para a razão social");renderAll();const p=allPostos()[id];if(S.sel===id&&p){$("#chNome").innerHTML=esc(nomeP(id,p))+suspTag(id);$("#chSub").textContent=subP(id,p)}}catch(err){toast("Não foi possível renomear: "+(err.message||err.code))}};
 $("#vAddBtn").onclick=()=>{$("#vForm").hidden=false;$("#vAddBtn").hidden=true;$("#v-modelo").focus()};
 $("#vCancel").onclick=()=>{$("#vForm").reset();$("#vForm").hidden=true;$("#vAddBtn").hidden=false};
 $("#vForm").onsubmit=async e=>{e.preventDefault();const modelo=$("#v-modelo").value.trim();if(!modelo){toast("Informe o modelo");return}
