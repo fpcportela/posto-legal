@@ -170,6 +170,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .btn.warn{background:var(--bad-soft);color:var(--bad);border-color:rgba(248,113,113,.45)}
 .susp-box{border:1px solid rgba(248,113,113,.45);background:var(--bad-soft);border-radius:var(--r-sm);padding:12px 14px;display:grid;gap:6px;justify-items:start}
 .susp-box strong{display:flex;align-items:center;gap:6px;color:var(--bad)}
+#suspAsk,#suspVer{z-index:35} /* abrem por cima da edição do abastecimento */
 .relato{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:4px;font-size:.92rem}
 .pin .pw{position:absolute;top:-9px;right:-9px;width:18px;height:18px;border-radius:50%;background:var(--bad);color:#1a0505;font-size:.72rem;font-weight:800;display:grid;place-items:center;line-height:1}
 .tq svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -387,6 +388,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <p class="note" id="mediaNote">A média aparece a partir do segundo abastecimento do mesmo veículo.</p>
       </div>
 
+      <div class="card" id="suspCard">
+        <button type="button" class="btn warn block" id="suspBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude</button>
+        <div class="susp-box" id="suspResumo" hidden>
+          <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude marcada</strong>
+          <div class="note" id="suspTxt"></div>
+          <div class="row"><button type="button" class="btn ghost small" id="suspEdit">Editar</button><button type="button" class="btn ghost small" id="suspRm">Remover</button></div>
+          <p class="note">Ela será registrada neste posto ao salvar o abastecimento.</p>
+        </div>
+      </div>
       <div class="card" id="primeiraVez" hidden>
         <h3>Avaliação</h3>
         <p class="note">Este é o primeiro abastecimento deste veículo no app. No próximo, depois de rodar com o combustível deste posto, você vai avaliá-lo.</p>
@@ -401,15 +411,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <p class="note">Para meia estrela (ex.: 3,5), toque na metade esquerda da estrela.</p>
         <label>Críticas, elogios ou sugestões<textarea id="obs" placeholder="Atendimento, limpeza, bomba aferida, preço, banheiro…"></textarea></label>
         <p class="note">Avalie pelo que você viveu lá e pelo rendimento do combustível. Sua nota e comentário ficam visíveis para todos os motoristas. Placa e quilometragem ficam só na sua conta.</p>
-      </div>
-      <div class="card" id="suspCard">
-        <button type="button" class="btn warn block" id="suspBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude</button>
-        <div class="susp-box" id="suspResumo" hidden>
-          <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude marcada</strong>
-          <div class="note" id="suspTxt"></div>
-          <div class="row"><button type="button" class="btn ghost small" id="suspEdit">Editar</button><button type="button" class="btn ghost small" id="suspRm">Remover</button></div>
-          <p class="note">Ela será registrada neste posto ao salvar o abastecimento.</p>
-        </div>
       </div>
       <button class="btn block" type="submit" id="saveAb">Salvar abastecimento</button>
     </form>
@@ -455,6 +456,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="two"><label>Combustível<select id="ed-comb"></select></label><label>Valor do litro (R$)<input type="text" class="money-ed" id="ed-preco" inputmode="numeric" autocomplete="off"></label></div>
     <div class="two"><label>Litros<input type="text" class="money-ed" id="ed-litros" inputmode="numeric" autocomplete="off"></label><label>Total pago (R$)<input type="text" class="money-ed" id="ed-total" inputmode="numeric" autocomplete="off"></label></div>
     <label class="check"><input type="checkbox" id="ed-cheio">Completei o tanque</label>
+    <button type="button" class="btn warn block" id="edSuspBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude</button>
+    <div class="susp-box" id="edSuspBox" hidden>
+      <strong><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>Suspeita de fraude</strong>
+      <div class="note" id="edSuspTxt"></div>
+      <div class="row"><button type="button" class="btn ghost small" id="edSuspEdit">Editar</button><button type="button" class="btn ghost small" id="edSuspRm">Remover</button></div>
+    </div>
+    <p class="note" id="edSuspNota" hidden>A alteração na suspeita é gravada ao salvar.</p>
     <p class="note">Ao salvar, a média deste abastecimento e a do seguinte são recalculadas.</p>
     <div class="row"><button class="btn" type="submit" id="abEdSalvar">Salvar alterações</button><button class="btn ghost" type="button" id="abEdCancel">Cancelar</button></div>
   </form></div>
@@ -630,7 +638,7 @@ const renBtn=id=>`<button class="btn ghost small" type="button" data-ren="${id}"
 // Suspeitas de fraude relatadas pelos motoristas (rede): S.susp[postoId] = [{id,uid,nome,categoria,motivo,data}]
 const ICO_ATENCAO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.5 20h19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>';
 const susp=id=>(S.susp&&S.susp[id])||[];
-const suspTag=id=>{const n=susp(id).length;return n?`<span class="susp" role="button" tabindex="0" data-susp="${id}" title="Ver os relatos de suspeita de fraude">${ICO_ATENCAO}${n} ${n>1?"suspeitas":"suspeita"}</span>`:""};
+const suspTag=id=>{const n=susp(id).length;return n?`<span class="susp" role="button" tabindex="0" data-susp="${id}" title="Ver os relatos de suspeita de fraude" aria-label="${n} ${n>1?"suspeitas":"suspeita"} de fraude: ver relatos">${ICO_ATENCAO}${n}</span>`:""};
 const suspBox=id=>{const n=susp(id).length;return n?`<div class="susp-box"><strong>${ICO_ATENCAO}${n} ${n>1?"suspeitas de fraude relatadas":"suspeita de fraude relatada"}</strong><p class="note">Relatos de motoristas, não verificados.</p><button class="btn ghost small" type="button" data-susp="${id}">Ver relatos</button></div>`:""};
 function allItems(){const out=[];const src=S.demo?{...S.pub,...DEMO_PUB}:S.pub;for(const [uid,items] of Object.entries(src))for(const it of items||[])out.push({...it,uid});return out}
 
@@ -731,7 +739,7 @@ async function carregarRede(){
   // suspeitas: se a tabela ainda não existe (schema.sql não rodado de novo), o app segue sem elas
   const sp=await sb.from("suspeitas").select("*").order("criado_em").limit(10000);S.susp={};
   if(sp.error)console.warn("suspeitas:",sp.error.message);
-  else for(const r of sp.data)(S.susp[r.posto_id]=S.susp[r.posto_id]||[]).push({id:r.id,uid:r.user_id,nome:r.nome,categoria:r.categoria,motivo:r.motivo,data:r.criado_em});
+  else for(const r of sp.data)(S.susp[r.posto_id]=S.susp[r.posto_id]||[]).push({id:r.id,uid:r.user_id,nome:r.nome,abastId:r.abastecimento_id,categoria:r.categoria,motivo:r.motivo,data:r.criado_em});
   S.pub={};S.pubNome={};
   for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas!=null?Number(r.estrelas):undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
 }
@@ -1401,7 +1409,7 @@ $("#mGps").onchange=async()=>{const on=$("#mGps").checked;S.gar={...S.gar,config
   try{await saveGar()}catch(e){}
   track("gps_aviso",{ligado:on});
   if(on){startGps(false);toast("Aviso por GPS ligado")}else{if(M.watch!=null)navigator.geolocation.clearWatch(M.watch);M.watch=null;toast("Aviso por GPS desligado")}};
-document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#abEdit").hidden)fecharEdicao();else if(!$("#suspVer").hidden)$("#suspVer").hidden=true;else if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#abEdit").hidden)fecharEdicao();else if(!$("#suspVer").hidden)$("#suspVer").hidden=true;else if(!$("#suspAsk").hidden)fecharSuspeita();else if(!$("#renAsk").hidden)fecharRenomear();else if(!$("#gpsAsk").hidden)$("#gpsNao").click();else if(!$("#sheet").hidden)fecharSheet()});
 $("#rank").onclick=e=>{const b=e.target.closest(".rk");if(b)renderDetail(b.dataset.id)};
 $("#hVeic").onchange=renderHist;$("#hPer").onchange=renderHist;$("#hDe").onchange=renderHist;$("#hAte").onchange=renderHist;
 /* suspeita de fraude: marcada no abastecimento, registrada no posto atual ao salvar */
@@ -1414,14 +1422,31 @@ $("#suspVer").onclick=e=>{if(e.target.id==="suspVer")$("#suspVer").hidden=true};
 document.addEventListener("click",e=>{const b=e.target.closest("[data-susp]");if(!b)return;e.stopPropagation();e.preventDefault();verSuspeitas(b.dataset.susp)},true);
 document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("span[data-susp]")){e.preventDefault();e.target.click()}});
 function pintaSuspPend(){const sp=S.suspPend;$("#suspBtn").hidden=!!sp;$("#suspResumo").hidden=!sp;$("#suspTxt").textContent=sp?`${sp.categoria}: ${sp.motivo}`:""}
-function abrirSuspeita(){if(!S.sel){toast("Escolha o posto primeiro");return}const sp=S.suspPend;
-  $("#suspPosto").textContent="Posto: "+nomeP(S.sel,allPostos()[S.sel]);$("#susp-cat").selectedIndex=0;if(sp)$("#susp-cat").value=sp.categoria;$("#susp-motivo").value=sp?sp.motivo:"";
+// A janela serve ao abastecimento novo (ctx "novo": S.suspPend) e à edição (ctx "edicao": S.edSusp).
+function abrirSuspeita(ctx){S.suspCtx=ctx==="edicao"?"edicao":"novo";let sp,nome;
+  if(S.suspCtx==="edicao"){const a=S.mine.find(x=>x.id===S.edAb);if(!a)return;sp=suspEdAtual(a);nome=a.postoNome}
+  else{if(!S.sel){toast("Escolha o posto primeiro");return}sp=S.suspPend;nome=nomeP(S.sel,allPostos()[S.sel])}
+  $("#suspPosto").textContent="Posto: "+nome;$("#susp-cat").selectedIndex=0;if(sp)$("#susp-cat").value=sp.categoria;$("#susp-motivo").value=sp?sp.motivo:"";
   $("#suspAsk").hidden=false;$("#susp-motivo").focus()}
 const fecharSuspeita=()=>{$("#suspAsk").hidden=true};
-$("#suspBtn").onclick=abrirSuspeita;$("#suspEdit").onclick=abrirSuspeita;$("#suspRm").onclick=()=>{S.suspPend=null;pintaSuspPend()};
+$("#suspBtn").onclick=()=>abrirSuspeita("novo");$("#suspEdit").onclick=()=>abrirSuspeita("novo");$("#suspRm").onclick=()=>{S.suspPend=null;pintaSuspPend()};
 $("#suspCancel").onclick=fecharSuspeita;$("#suspAsk").onclick=e=>{if(e.target.id==="suspAsk")fecharSuspeita()};
+// edição: a suspeita que EU registrei neste abastecimento; S.edSusp = undefined (sem mudança), {…} (gravar) ou false (remover)
+const minhaSusp=a=>susp(a.postoId).find(x=>x.abastId===a.id&&x.uid===S.uid)||null;
+const suspEdAtual=a=>S.edSusp===undefined?minhaSusp(a):(S.edSusp||null);
+function pintaEdSusp(){const a=S.mine.find(x=>x.id===S.edAb);if(!a)return;const sp=suspEdAtual(a);
+  $("#edSuspBtn").hidden=!!sp;$("#edSuspBox").hidden=!sp;$("#edSuspTxt").textContent=sp?`${sp.categoria}: ${sp.motivo}`:"";$("#edSuspNota").hidden=S.edSusp===undefined}
+$("#edSuspBtn").onclick=()=>abrirSuspeita("edicao");$("#edSuspEdit").onclick=()=>abrirSuspeita("edicao");$("#edSuspRm").onclick=()=>{S.edSusp=false;pintaEdSusp()};
+async function gravarSuspEdicao(a,ed){const m=minhaSusp(a);
+  if(ed===false){if(!m)return;if(sb){const {error}=await sb.from("suspeitas").delete().eq("id",m.id);if(error)throw error}
+    S.susp[a.postoId]=susp(a.postoId).filter(x=>x!==m);if(!sb)lsSave();return}
+  if(m){if(sb){const {error}=await sb.from("suspeitas").update({categoria:ed.categoria,motivo:ed.motivo}).eq("id",m.id);if(error)throw error}
+    Object.assign(m,{categoria:ed.categoria,motivo:ed.motivo});if(!sb)lsSave();return}
+  await saveSuspeita({id:"su-"+Date.now(),postoId:a.postoId,abastId:a.id,categoria:ed.categoria,motivo:ed.motivo,data:new Date().toISOString()});
+}
 $("#suspForm").onsubmit=e=>{e.preventDefault();const motivo=$("#susp-motivo").value.replace(/\s+/g," ").trim();
   if(motivo.length<10){toast("Descreva o motivo (pelo menos 10 caracteres)");$("#susp-motivo").focus();return}
+  if(S.suspCtx==="edicao"){S.edSusp={categoria:$("#susp-cat").value,motivo};fecharSuspeita();pintaEdSusp();return}
   S.suspPend={categoria:$("#susp-cat").value,motivo};fecharSuspeita();pintaSuspPend();toast("Suspeita marcada. Ela será registrada ao salvar o abastecimento.")};
 /* editar abastecimento (Histórico e Painel): data e km ficam entre o anterior e o seguinte do mesmo
    veículo; a média deste e a do seguinte são recalculadas, e o que foi para a rede (preço, km/l) também. */
@@ -1433,9 +1458,10 @@ function abrirEdicao(abId){
   $("#abEdPosto").textContent=[a.postoNome,v?v.modelo:"",fdata(a.data)].filter(Boolean).join(" · ");
   $("#ed-comb").innerHTML=[...new Set([...COMBS,a.comb].filter(Boolean))].map(c=>`<option>${esc(c)}</option>`).join("");$("#ed-comb").value=a.comb;
   $("#ed-data").value=isoDia(a.data);$("#ed-km").value=a.km;$("#ed-preco").value=fmtBR(a.preco);$("#ed-litros").value=fmtBR(a.litros);$("#ed-total").value=fmtBR(a.total);$("#ed-cheio").checked=!!a.cheio;
+  S.edSusp=undefined;pintaEdSusp();
   $("#abEdit").hidden=false;$("#ed-km").focus();
 }
-function fecharEdicao(){$("#abEdit").hidden=true;S.edAb=null}
+function fecharEdicao(){$("#abEdit").hidden=true;S.edAb=null;S.edSusp=undefined}
 $("#abEdCancel").onclick=fecharEdicao;$("#abEdit").onclick=e=>{if(e.target.id==="abEdit")fecharEdicao()};
 // valor do litro × litros = total (o último digitado entre litros e total manda)
 document.querySelectorAll("input.money-ed").forEach(el=>el.addEventListener("input",()=>{maskMoney(el);
@@ -1467,6 +1493,7 @@ $("#abEdForm").onsubmit=async e=>{e.preventDefault();
   const ip=prev&&items.find(i=>i.id===prev.id);if(ip){if(a2.media)ip.kmL=a2.media;else delete ip.kmL;ids.push(ip.id)}
   $("#abEdSalvar").disabled=true;
   try{await saveAbast(a2);if(next2)await saveAbast(next2);if(prev2)await saveAbast(prev2);if(ids.length)await savePub(items.slice(-400),ids);
+    if(S.edSusp!==undefined){await gravarSuspEdicao(a2,S.edSusp);track(S.edSusp?"suspeita_fraude_editada":"suspeita_fraude_removida",{})}
     track("abastecimento_editado",{});fecharEdicao();toast("Abastecimento atualizado");renderAll()}
   catch(err){toast("Não foi possível salvar: "+(err.message||err.code))}
   finally{$("#abEdSalvar").disabled=false}};

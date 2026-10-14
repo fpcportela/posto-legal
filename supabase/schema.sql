@@ -215,10 +215,12 @@ alter table public.suspeitas enable row level security;
 drop policy if exists susp_ler on public.suspeitas;
 drop policy if exists susp_criar on public.suspeitas;
 drop policy if exists susp_apagar on public.suspeitas;
+drop policy if exists susp_alterar on public.suspeitas;
 create policy susp_ler on public.suspeitas for select to authenticated using (true);
 create policy susp_criar on public.suspeitas for insert to authenticated with check (user_id = auth.uid());
+create policy susp_alterar on public.suspeitas for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy susp_apagar on public.suspeitas for delete to authenticated using (user_id = auth.uid() or public.is_admin());
-grant select, insert, delete on public.suspeitas to authenticated;
+grant select, insert, update, delete on public.suspeitas to authenticated;
 
 -- ---------- visões para análise (só administradores enxergam linhas) ----------
 create or replace view public.uso_por_dia with (security_invoker = on) as
