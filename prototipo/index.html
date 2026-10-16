@@ -161,6 +161,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ab{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
 .ab .r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .ab .s{font-size:.8rem;color:var(--muted)}
+.ab-main{min-width:0;display:grid;gap:4px}
+.ab-nome{overflow-wrap:anywhere;line-height:1.25}
+.ab-selos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px}
+.ab-selos .tq,.ab-selos .susp{margin-left:0;vertical-align:0}
+.ab .r .ab-total{display:block;font-size:1rem;font-weight:600;color:var(--ink);white-space:nowrap}
 .ab .dest{color:var(--brand);font-weight:700}
 .ab[data-ab]{cursor:pointer}
 .ab[data-ab]:hover,.ab[data-ab]:focus-visible{border-color:var(--line2);background:var(--surface-2,var(--surface))}
@@ -1140,6 +1145,10 @@ function consumoPorAbast(){
     if(p){if(a.km>p.km)rod[p.id]=a.km-p.km;if(a.media)med[p.id]=a.media}ult[a.veiculoId]=a});
   return {rod,med};
 }
+// cartão de abastecimento (Painel e Histórico): posto, selos, data/veículo/km, combustível/litros/preço, total, km/l e km rodados
+const TQ_CHEIO=`<span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`;
+function abCard(a,veics,med,rod){const vv=veics.find(x=>x.id===a.veiculoId),selos=suspTag(a.postoId)+(a.cheio?TQ_CHEIO:"");
+  return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div class="ab-main"><b class="ab-nome">${esc(a.postoNome)}</b>${selos?`<div class="ab-selos">${selos}</div>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r"><span class="ab-total">${brl(a.total)}</span>${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}
 function renderHist(){
   const v=S.gar.veiculos||[],sel=$("#hVeic"),cur=sel.value;
   sel.innerHTML='<option value="">Todos os veículos</option>'+v.map(x=>`<option value="${x.id}">${esc(x.modelo)}</option>`).join("");sel.value=v.some(x=>x.id===cur)?cur:"";
@@ -1152,8 +1161,7 @@ function renderHist(){
   const mediaG=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   $("#hKpis").innerHTML=`<div class="metric"><div class="k">Abastecimentos</div><div class="v">${list.length}</div></div><div class="metric"><div class="k">Total gasto</div><div class="v">${brl(gasto)}</div></div><div class="metric hl"><div class="k">Média geral</div><div class="v">${mediaG?num(mediaG)+" km/l":"—"}</div></div>`;
   const {rod,med}=consumoPorAbast();
-  $("#hist").innerHTML=list.length?list.map(a=>{const vv=v.find(x=>x.id===a.veiculoId);
-    return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div><b>${esc(a.postoNome)}</b>${suspTag(a.postoId)}${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
+  $("#hist").innerHTML=list.length?list.map(a=>abCard(a,v,med,rod)).join("")
     :S.mine.length?'<div class="empty card"><span>Nenhum abastecimento neste período.</span><span class="note">Escolha outro período ou outro veículo.</span></div>'
     :'<div class="empty card"><span>Nenhum abastecimento registrado.</span><span class="note">Use a aba Abastecer quando parar no posto.</span></div>';
 }
@@ -1183,8 +1191,8 @@ function renderPainel(){
   const pend=v.map(x=>({x,a:lastAbast(x.id)})).filter(o=>o.a);
   $("#pPend").innerHTML=pend.map(({x,a})=>`<div class="card pend"><h3>Aguardando avaliação</h3><div class="t">${esc(a.postoNome)} — ${esc(a.comb)}${suspTag(a.postoId)}</div><p class="note">${v.length>1?esc(x.modelo)+" · ":""}Avalie no próximo abastecimento para calcular consumo e qualidade.</p></div>`).join("");
   const ult=[...ab].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,3);
-  const {med}=consumoPorAbast();
-  $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>`<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div><b>${esc(a.postoNome)}</b>${suspTag(a.postoId)}<div class="s">${fdata(a.data)} · ${esc(a.comb)} · ${num(a.litros,2)} L</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}</div></div>`).join("")
+  const {rod,med}=consumoPorAbast();
+  $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>abCard(a,v,med,rod)).join("")
     :'<div class="empty card"><span>Nenhum abastecimento ainda.</span><span class="note">Toque em “Novo abastecimento” quando parar no posto.</span></div>';
 }
 $("#pVeic").onclick=()=>{show("garagem");$("#vAddBtn").click()};
