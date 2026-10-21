@@ -343,7 +343,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <h3 id="vInlineTit">Cadastre seu veículo</h3>
           <div class="two">
             <label>Modelo<input id="vi-modelo" placeholder="Onix 1.0 2022"></label>
-            <label>Placa<input id="vi-placa" placeholder="ABC1D23" maxlength="8"></label>
+            <label>Placa<input id="vi-placa" placeholder="ABC1D23" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></label>
           </div>
           <label>Combustível usual<select id="vi-comb"></select></label>
           <div class="row"><button class="btn" type="button" id="viSave">Salvar veículo</button><button class="btn ghost" type="button" id="viCancel">Cancelar</button></div>
@@ -487,7 +487,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <h3>Novo veículo</h3>
         <div class="two">
           <label>Modelo<input id="v-modelo" placeholder="Onix 1.0 2022" required></label>
-          <label>Placa<input id="v-placa" placeholder="ABC1D23" maxlength="8"></label>
+          <label>Placa<input id="v-placa" placeholder="ABC1D23" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></label>
         </div>
         <label>Combustível usual<select id="v-comb"></select></label>
         <div class="row"><button class="btn" type="submit">Salvar veículo</button><button class="btn ghost" type="button" id="vCancel">Cancelar</button></div>
@@ -497,8 +497,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <h3>Alertas de reputação</h3>
       <p class="note">Ao chegar num posto, o app avisa conforme a nota média dele.</p>
       <div class="two">
-        <label>Avisar “péssimo” com nota até<input type="number" id="c-baixo" step="0.1" min="1" max="5"></label>
-        <label>Avisar “ótimo” com nota a partir de<input type="number" id="c-alto" step="0.1" min="1" max="5"></label>
+        <label>Avisar “péssimo” com nota até<select id="c-baixo" class="notaSel"></select></label>
+        <label>Avisar “ótimo” com nota a partir de<select id="c-alto" class="notaSel"></select></label>
       </div>
       <label>Mínimo de avaliações para avisar<input type="number" id="c-min" step="1" min="1"></label>
       <button class="btn ghost" id="saveCfg">Salvar alertas</button>
@@ -517,7 +517,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 const SUPABASE_URL="",SUPABASE_KEY="";
 const COMBS=["Gasolina comum","Gasolina aditivada","Gasolina premium","Etanol","Diesel S10","Diesel S500","GNV"];
 const RATE_TXT=["","Não gostei","Ruim","Regular","Bom","Gostei muito"];
-const CFG_PADRAO={baixo:2.5,alto:4.2,min:2};
+const CFG_PADRAO={baixo:2.5,alto:4,min:2};
+// as notas são dadas em meias estrelas: os limites dos alertas também andam de 0,5 em 0,5
+const meioPonto=v=>Math.min(5,Math.max(1,Math.round(Number(v)*2)/2));
+const cfgAlertas=()=>{const c={...CFG_PADRAO,...(S.gar.config||{})};return {...c,baixo:meioPonto(c.baixo),alto:meioPonto(c.alto)}};
 const S={uid:null,mode:"local",postos:{},anp:{},pub:{},susp:{},suspPend:null,mine:[],gar:{veiculos:[],config:{...CFG_PADRAO}},demo:false,sel:null,stars:0,names:{},pubNome:{},conta:null,contaOk:false,usuarios:[],isOwner:false};
 let db=null,user=null,sample=null;
 const $=s=>document.querySelector(s);
@@ -620,7 +623,7 @@ function stats(pid){
   return {its,n:rated.length,media,kml,precos};
 }
 function reputacao(st){
-  const c=S.gar.config||CFG_PADRAO;
+  const c=cfgAlertas();
   if(!st.n)return {cls:"none",tit:"Posto ainda sem avaliações",txt:"Os motoristas avaliam o posto no abastecimento seguinte, depois de rodar com o combustível dele."};
   if(st.n<c.min)return {cls:"mid",tit:`Nota ${num(st.media)} com poucas avaliações`,txt:`Só ${st.n} avaliação(ões) até agora.`};
   if(st.media<=c.baixo)return {cls:"bad",tit:`Atenção: posto mal avaliado (${num(st.media)})`,txt:`${st.n} motoristas avaliaram. Veja as reclamações antes de abastecer.`};
@@ -867,8 +870,11 @@ function openVInline(manual){
   $("#vInlineTit").textContent=has?"Novo veículo":"Cadastre seu veículo para continuar";
   $("#viCancel").hidden=!has;
 }
+// placa sempre em caixa alta: converte enquanto digita e mantém só letras, números e hífen
+const fmtPlaca=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,8);
+["#vi-placa","#v-placa"].forEach(k=>$(k).addEventListener("input",e=>{const el=e.target,pos=el.selectionStart,novo=fmtPlaca(el.value);if(novo!==el.value){el.value=novo;try{el.setSelectionRange(pos,pos)}catch(x){}}}));
 async function addVeiculo(modelo,placa,comb){
-  const nv={id:"v"+Date.now(),modelo,placa:placa.toUpperCase(),comb};
+  const nv={id:"v"+Date.now(),modelo,placa:fmtPlaca(placa),comb};
   S.gar={...S.gar,veiculos:[...(S.gar.veiculos||[]),nv]};
   await saveGar();return nv;
 }
@@ -987,7 +993,7 @@ function renderMapa(){
   if(!window.L){$("#mapMsg").textContent="Não foi possível carregar o mapa. Verifique a conexão com a internet.";return}
   if($("#v-mapa").hidden&&!map)return;
   if(!map)initMap();
-  const P=allPostos(),comb=combMapa(),c=S.gar.config||CFG_PADRAO,dados=postosComDados(),zoom=map.getZoom(),vis=map.getBounds().pad(.2);let semLoc=0,n=0,leves=0,anpFora=0;
+  const P=allPostos(),comb=combMapa(),c=cfgAlertas(),dados=postosComDados(),zoom=map.getZoom(),vis=map.getBounds().pad(.2);let semLoc=0,n=0,leves=0,anpFora=0;
   mkLayer.clearLayers();
   for(const [id,p] of Object.entries(P)){
     // posto da ANP ainda sem nenhuma informação da rede: bolinha leve (canvas), só na área visível
@@ -1130,8 +1136,8 @@ function renderHist(){
 function renderGaragem(){renderConta();renderAdmin();
   const v=S.gar.veiculos||[];
   $("#veicList").innerHTML=v.length?v.map(x=>`<div class="veic"><div><b>${esc(x.modelo)}</b> ${x.placa?`<span class="plate-sm">${esc(x.placa)}</span>`:""}<div class="note">${esc(x.comb||"")}</div></div><button class="btn ghost small" data-rm="${x.id}">Remover</button></div>`).join(""):'<p class="note">Nenhum veículo ainda. Toque em “Adicionar veículo” para cadastrar o primeiro.</p>';
-  const c=S.gar.config||CFG_PADRAO;
-  if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=c.baixo;$("#c-alto").value=c.alto;$("#c-min").value=c.min}
+  const c=cfgAlertas();
+  if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=String(meioPonto(c.baixo));$("#c-alto").value=String(meioPonto(c.alto));$("#c-min").value=c.min}
 }
 
 function renderAll(){renderPostoList();fillVeicSelect();renderRede();renderMapa();if(M.alvo&&!$("#sheet").hidden&&allPostos()[M.alvo])abrirPosto(M.alvo);renderHist();renderGaragem();if((S.gar.config||{}).gps&&M.watch==null&&!M.gpsErro)startGps(false);if(S.sel)renderAlert();if(S.detail&&!$("#detail").hidden)renderDetail(S.detail);updateCalc();renderPainel();anpPerto()}
@@ -1481,10 +1487,11 @@ $("#veicList").onclick=async e=>{const b=e.target.closest("[data-rm]");if(!b)ret
   if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Confirmar remoção";b.classList.remove("ghost");return}
   S.gar={...S.gar,veiculos:S.gar.veiculos.filter(x=>x.id!==b.dataset.rm)};try{await saveGar();toast("Veículo removido");renderAll()}catch(err){toast("Não foi possível remover")}};
 $("#saveCfg").onclick=async()=>{const n=k=>parseFloat($(k).value);
-  const cfg={...(S.gar.config||{}),baixo:n("#c-baixo")||CFG_PADRAO.baixo,alto:n("#c-alto")||CFG_PADRAO.alto,min:Math.max(1,Math.round(n("#c-min")||CFG_PADRAO.min))};
+  const cfg={...(S.gar.config||{}),baixo:meioPonto(n("#c-baixo")||CFG_PADRAO.baixo),alto:meioPonto(n("#c-alto")||CFG_PADRAO.alto),min:Math.max(1,Math.round(n("#c-min")||CFG_PADRAO.min))};
   if(cfg.baixo>=cfg.alto){toast("A nota de “péssimo” precisa ser menor que a de “ótimo”");return}
   S.gar={...S.gar,config:cfg};try{await saveGar();toast("Alertas salvos");renderAll()}catch(err){toast("Não foi possível salvar")}};
 
+document.querySelectorAll(".notaSel").forEach(sel=>sel.innerHTML=Array.from({length:9},(_,i)=>1+i/2).map(v=>`<option value="${v}">${v.toLocaleString("pt-BR",{minimumFractionDigits:1})} ★</option>`).join(""));
 $("#comb").innerHTML=$("#v-comb").innerHTML=$("#vi-comb").innerHTML=$("#mComb").innerHTML=COMBS.map(c=>`<option>${c}</option>`).join("");
 try{const t=localStorage.getItem(LS+"-tab");if(t&&document.getElementById("v-"+t))show(t)}catch(e){}
 /* ---------- CONTA / CADASTRO ---------- */
