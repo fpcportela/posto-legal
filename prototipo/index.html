@@ -355,7 +355,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <label>Quilometragem atual (km)<input type="number" id="km" inputmode="numeric" min="0" step="1"></label>
         <div class="two">
           <label>Combustível<select id="comb"></select></label>
-          <label>Valor do litro (R$)<input type="text" class="money" id="preco" inputmode="numeric" placeholder="0,00" autocomplete="off"></label>
+          <label>Valor do litro (R$)<input type="text" class="money" id="preco" inputmode="numeric" placeholder="0,000" autocomplete="off"></label>
         </div>
         <div class="two">
           <label>Litros<input type="text" class="money" id="litros" inputmode="numeric" placeholder="0,00" autocomplete="off"></label>
@@ -531,6 +531,8 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=(v,d=1)=>v==null||isNaN(v)?"—":Number(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const brl=v=>v==null||isNaN(v)?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+// preço do litro: 3 casas decimais (R$ 6,899)
+const brlL=v=>v==null||isNaN(v)?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:3,maximumFractionDigits:3});
 const fdata=iso=>iso?new Date(iso).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"—";
 function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
 const starsHtml=v=>`<span class="stars" style="--p:${Math.max(0,Math.min(100,(v||0)/5*100))}%">★★★★★</span>`;
@@ -858,7 +860,7 @@ function renderAlert(){
   const res=resumoIA[S.sel]||resumoSimples(st.its);
   $("#repAlert").innerHTML=suspBox(S.sel)+`<div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div><p class="note" style="color:inherit">${r.txt}</p>
     ${st.n?`<div class="summary" id="alSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="alIA" type="button">Resumir comentários com IA</button>':""}`:""}
-    ${Object.keys(st.precos).length?`<div class="note" style="color:inherit">Último preço relatado: ${Object.entries(st.precos).map(([c,v])=>`${esc(c)} ${brl(v.preco)}`).join(" · ")}</div>`:""}</div>`;
+    ${Object.keys(st.precos).length?`<div class="note" style="color:inherit">Último preço relatado: ${Object.entries(st.precos).map(([c,v])=>`${esc(c)} ${brlL(v.preco)}`).join(" · ")}</div>`:""}</div>`;
   const b=$("#alIA");if(b)b.onclick=()=>gerarResumo(S.sel,$("#alSum"),b);
 }
 function fillVeicSelect(){
@@ -899,7 +901,7 @@ function updateRateCard(c){
   const has=!!c.last&&c.vid!=="__novo";
   $("#rateCard").hidden=!has;$("#primeiraVez").hidden=has||!c.vid||c.vid==="__novo";
   if(has){$("#rtNome").innerHTML=esc(c.last.postoNome)+suspTag(c.last.postoId);
-    $("#rtSub").textContent=`Abastecido em ${fdata(c.last.data)} · ${c.last.comb} a ${brl(c.last.preco)}/L`+(c.media?` · rendeu ${num(c.media)} km/l`:"");}
+    $("#rtSub").textContent=`Abastecido em ${fdata(c.last.data)} · ${c.last.comb} a ${brlL(c.last.preco)}/L`+(c.media?` · rendeu ${num(c.media)} km/l`:"");}
 }
 function updateCalc(){
   const c=calc();updateRateCard(c);
@@ -947,9 +949,9 @@ function renderDetail(id){
     ${susp(id).length?`<div class="susp-box"><strong>${ICO_ATENCAO}Suspeitas de fraude (${susp(id).length})</strong><p class="note">Relatos de motoristas, não verificados.</p></div>${relatosHtml(id)}`:""}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="summary" id="detSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="detIA">Resumir comentários com IA</button>':""}</div>
-    ${Object.keys(st.precos).length?`<h3>Último preço relatado</h3><div class="prices">${Object.entries(st.precos).map(([c,v])=>`<div class="metric"><div class="k">${esc(c)}</div><div class="v">${brl(v.preco)}</div><div class="note">${fdata(v.data)}</div></div>`).join("")}</div>`:""}
+    ${Object.keys(st.precos).length?`<h3>Último preço relatado</h3><div class="prices">${Object.entries(st.precos).map(([c,v])=>`<div class="metric"><div class="k">${esc(c)}</div><div class="v">${brlL(v.preco)}</div><div class="note">${fdata(v.data)}</div></div>`).join("")}</div>`:""}
     ${kml.length?`<h3>Rendimento relatado</h3><div class="prices">${kml.map(i=>`<div class="metric"><div class="k">${esc(i.modelo||"Veículo")}</div><div class="v">${num(i.kmL)} km/l</div><div class="note">${esc(i.comb||"")}</div></div>`).join("")}</div>`:""}
-    <h3>Avaliações</h3>${reviews.length?reviews.map(i=>`<div class="review"><div class="row between">${starsHtml(i.estrelas)}<span class="meta">${esc(i.uid==="demo-u"?"Motorista exemplo":i.uid===S.uid?"Você":(S.pubNome[i.uid]||S.names[i.uid]||"Motorista"))} · ${fdata(i.avaliadoEm||i.data)}</span></div>${i.obs?`<div>${esc(i.obs)}</div>`:""}<div class="meta">${esc(i.comb||"")}${i.preco?" · "+brl(i.preco)+"/L":""}</div></div>`).join(""):'<p class="note">Sem avaliações ainda.</p>'}`;
+    <h3>Avaliações</h3>${reviews.length?reviews.map(i=>`<div class="review"><div class="row between">${starsHtml(i.estrelas)}<span class="meta">${esc(i.uid==="demo-u"?"Motorista exemplo":i.uid===S.uid?"Você":(S.pubNome[i.uid]||S.names[i.uid]||"Motorista"))} · ${fdata(i.avaliadoEm||i.data)}</span></div>${i.obs?`<div>${esc(i.obs)}</div>`:""}<div class="meta">${esc(i.comb||"")}${i.preco?" · "+brlL(i.preco)+"/L":""}</div></div>`).join(""):'<p class="note">Sem avaliações ainda.</p>'}`;
   $("#detClose").onclick=()=>{$("#detail").hidden=true;S.detail=null};
   const b=$("#detIA");if(b)b.onclick=()=>gerarResumo(id,$("#detSum"),b);
   $("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
@@ -1008,7 +1010,7 @@ function renderMapa(){
     const k=coords(id,p);if(!k){if(!p.anp)semLoc++;continue}
     const {st,r,pr}=infoPosto(id);
     if(M.soComb&&!pr)continue;n++;
-    const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
+    const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brlL(pr.preco):"sem preço"}</span></div>`;
     L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:nomeP(id,p),zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
   }
   $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span><span><i style="--c:#b9a17a"></i>Cadastro da ANP, sem avaliação</span>`;
@@ -1023,7 +1025,7 @@ function abrirPosto(id){
   $("#sheetIn").innerHTML=`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div><h2>${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</h2><p class="note">${esc(subP(id,p))}${M.me&&k?" · a "+fmtDist(distM(M.me,k)):""}</p></div><div class="row" style="flex-wrap:nowrap">${renBtn(id)}<button class="btn ghost small" id="shClose">Fechar</button></div></div>
     <div class="readout">
       <div class="metric hl"><div class="k">Nota</div><div class="v">${st.n?num(st.media):"—"}</div><div class="note">${st.n} avaliação(ões)</div></div>
-      <div class="metric"><div class="k">${esc(comb)}</div><div class="v">${pr?brl(pr.preco):"—"}</div><div class="note">${pr?"relatado em "+fdata(pr.data):"sem preço relatado"}</div></div>
+      <div class="metric"><div class="k">${esc(comb)}</div><div class="v">${pr?brlL(pr.preco):"—"}</div><div class="note">${pr?"relatado em "+fdata(pr.data):"sem preço relatado"}</div></div>
       <div class="metric"><div class="k">Rendimento</div><div class="v">${kml?num(kml)+" km/l":"—"}</div><div class="note">${kml?"com "+esc(comb):"sem dados"}</div></div>
     </div>
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
@@ -1097,7 +1099,7 @@ function perguntar(id,simulado){
   $("#gpsIn").innerHTML=`<h3><span class="pulse" style="background:var(--brand)"></span>${simulado?"Simulação: você parou num posto":"Você parou num posto"}</h3>
     <h2 id="gpsTit">Vai abastecer no ${esc(nomeP(id,p))}?</h2>${suspBox(id)}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
-      <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brl(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
+      <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brlL(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
       ${destaque.length?`<div class="summary">${destaque.map(([c,t,x])=>`<div class="${c}"><b>${t}</b>${esc(x)}</div>`).join("")}</div>`:""}</div>
     <div class="row"><button class="btn" id="gpsSim">Sim, vou abastecer</button><button class="btn ghost" id="gpsNao">Agora não</button></div>`;
   $("#gpsAsk").hidden=false;$("#gpsSim").focus();track("gps_pergunta",{simulado:!!simulado});
@@ -1118,7 +1120,7 @@ function consumoPorAbast(){
 // cartão de abastecimento (Painel e Histórico): posto, selos, data/veículo/km, combustível/litros/preço, total, km/l e km rodados
 const TQ_CHEIO=`<span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`;
 function abCard(a,veics,med,rod){const vv=veics.find(x=>x.id===a.veiculoId),selos=suspTag(a.postoId)+(a.cheio?TQ_CHEIO:"");
-  return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div class="ab-main">${selos?`<div class="ab-selos">${selos}</div>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r"><span class="ab-total">${brl(a.total)}</span>${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div><div class="ab-posto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><b class="ab-nome">${esc(a.postoNome||"Posto sem nome")}</b></div></div>`}
+  return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div class="ab-main">${selos?`<div class="ab-selos">${selos}</div>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brlL(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r"><span class="ab-total">${brl(a.total)}</span>${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div><div class="ab-posto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><b class="ab-nome">${esc(a.postoNome||"Posto sem nome")}</b></div></div>`}
 function renderHist(){
   const v=S.gar.veiculos||[],sel=$("#hVeic"),cur=sel.value;
   sel.innerHTML='<option value="">Todos os veículos</option>'+v.map(x=>`<option value="${x.id}">${esc(x.modelo)}</option>`).join("");sel.value=v.some(x=>x.id===cur)?cur:"";
@@ -1317,8 +1319,9 @@ $("#viSave").onclick=async()=>{
 $("#viCancel").onclick=()=>{$("#vInline").hidden=true;delete $("#vInline").dataset.manual;const v=S.gar.veiculos||[];if(v[0])$("#veiculo").value=v[0].id;prefillVeic();updateCalc()};
 /* valores com vírgula automática: os dígitos entram pela direita (459 → 4,59) */
 const parseBR=v=>{v=String(v||"").replace(/\./g,"").replace(",",".");const n=parseFloat(v);return isNaN(n)||n<=0?null:n};
-const fmtBR=n=>n==null?"":n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-function maskMoney(el){const d=el.value.replace(/\D/g,"").replace(/^0+/,"").slice(0,9);el.value=d?fmtBR(parseInt(d,10)/100):""}
+const fmtBR=(n,c=2)=>n==null?"":n.toLocaleString("pt-BR",{minimumFractionDigits:c,maximumFractionDigits:c});
+const casasDe=el=>el.id==="preco"||el.id==="ed-preco"?3:2; // valor do litro com 3 casas
+function maskMoney(el){const c=casasDe(el),d=el.value.replace(/\D/g,"").replace(/^0+/,"").slice(0,9);el.value=d?fmtBR(parseInt(d,10)/10**c,c):""}
 // Com o valor do litro preenchido: digitou o total, calcula os litros; digitou os litros, calcula o total.
 let ultimoDigitado=null; // "litros" ou "total"
 function autoFill(changed){
@@ -1435,7 +1438,7 @@ function abrirEdicao(abId){
   const v=(S.gar.veiculos||[]).find(x=>x.id===a.veiculoId);
   $("#abEdPosto").textContent=[v?v.modelo:"",fdata(a.data)].filter(Boolean).join(" · ");$("#abEdPostoNome").textContent=a.postoNome||"Posto sem nome";
   $("#ed-comb").innerHTML=[...new Set([...COMBS,a.comb].filter(Boolean))].map(c=>`<option>${esc(c)}</option>`).join("");$("#ed-comb").value=a.comb;
-  $("#ed-data").value=isoDia(a.data);$("#ed-km").value=a.km;$("#ed-preco").value=fmtBR(a.preco);$("#ed-litros").value=fmtBR(a.litros);$("#ed-total").value=fmtBR(a.total);$("#ed-cheio").checked=!!a.cheio;
+  $("#ed-data").value=isoDia(a.data);$("#ed-km").value=a.km;$("#ed-preco").value=fmtBR(a.preco,3);$("#ed-litros").value=fmtBR(a.litros);$("#ed-total").value=fmtBR(a.total);$("#ed-cheio").checked=!!a.cheio;
   S.edSusp=undefined;pintaEdSusp();
   $("#abEdit").hidden=false;$("#ed-km").focus();
 }
