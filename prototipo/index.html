@@ -163,6 +163,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ab .s{font-size:.8rem;color:var(--muted)}
 .ab-main{min-width:0;display:grid;gap:4px}
 .ab-nome{overflow-wrap:anywhere;line-height:1.25}
+.p-filtro{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:4px 0 12px}
+.p-filtro label{margin:0;color:var(--muted);font-size:.85rem}
+.p-filtro select{width:auto;min-width:180px}
 .ab-posto{grid-column:1/-1;text-align:right;margin-top:6px;padding-top:8px;border-top:1px dashed var(--line);color:var(--ink)}
 .ab-posto svg,.ed-posto svg{display:inline-block;width:15px;height:15px;vertical-align:-2px;margin-right:6px;fill:none;stroke:var(--brand);stroke-width:2}
 .ed-rodape{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
@@ -303,6 +306,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <button class="btn sec big" id="pRank"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Ver ranking de postos</button>
       </div>
     </div>
+    <div class="p-filtro" id="pFiltro" hidden><label for="pVeicSel">Veículo</label><select id="pVeicSel" aria-label="Filtrar por veículo"></select></div>
     <div class="stats" id="pStats"></div>
     <div id="pPend" class="hist"></div>
     <div id="pUlt" class="hist"></div>
@@ -1154,13 +1158,18 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dat
 /* ---------- PAINEL ---------- */
 const IC={bomba:'<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 8h5M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/>',gota:'<circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-3.5"/>',estrela:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',sobe:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>'};
 function renderPainel(){
-  const ab=S.mine,v=S.gar.veiculos||[];
+  const v=S.gar.veiculos||[],sel=$("#pVeicSel"),cur=sel.value,multi=v.length>1;
+  // filtro por veículo: só aparece com 2 ou mais veículos cadastrados
+  $("#pFiltro").hidden=!multi;
+  sel.innerHTML='<option value="">Todos os veículos</option>'+v.map(x=>`<option value="${x.id}">${esc(x.modelo)}</option>`).join("");
+  sel.value=multi&&v.some(x=>x.id===cur)?cur:"";
+  const fv=sel.value,ab=fv?S.mine.filter(a=>a.veiculoId===fv):S.mine;
   $("#pVeic").hidden=v.length>0;
   const litros=ab.reduce((s,a)=>s+(a.litros||0),0),nts=ab.filter(a=>a.estrelas),meds=ab.filter(a=>a.media);
   const nota=nts.length?nts.reduce((s,a)=>s+a.estrelas,0)/nts.length:null,cons=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   const st=(ic,k,val,un)=>`<div class="stat"><div class="k"><svg viewBox="0 0 24 24">${IC[ic]}</svg>${k}</div><div class="v">${val}${un&&val!=="—"?`<small>${un}</small>`:""}</div></div>`;
   $("#pStats").innerHTML=st("bomba","Abastecimentos",ab.length)+st("gota","Litros totais",ab.length?num(litros,1):"—","L")+st("estrela","Nota média",nota?num(nota,1):"—","/5")+st("sobe","Consumo médio",cons?num(cons,1):"—","km/L");
-  const pend=v.map(x=>({x,a:lastAbast(x.id)})).filter(o=>o.a);
+  const pend=v.filter(x=>!fv||x.id===fv).map(x=>({x,a:lastAbast(x.id)})).filter(o=>o.a);
   $("#pPend").innerHTML=pend.map(({x,a})=>`<div class="card pend"><h3>Aguardando avaliação</h3><div class="t">${esc(a.postoNome)} — ${esc(a.comb)}${suspTag(a.postoId)}</div><p class="note">${v.length>1?esc(x.modelo)+" · ":""}Avalie no próximo abastecimento para calcular consumo e qualidade.</p></div>`).join("");
   const ult=[...ab].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,3);
   const {rod,med}=consumoPorAbast();
@@ -1169,6 +1178,7 @@ function renderPainel(){
 }
 $("#pVeic").onclick=()=>{show("garagem");$("#vAddBtn").click()};
 $("#pNovo").onclick=()=>show("abastecer");
+$("#pVeicSel").onchange=()=>{renderPainel();$("#hVeic").value=$("#pVeicSel").value;renderHist()}; // "Ver todos" abre o Histórico no mesmo veículo
 $("#pRank").onclick=()=>show("rede");
 $("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b){show(b.dataset.go);return}const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
 $("#hist").onclick=e=>{const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
