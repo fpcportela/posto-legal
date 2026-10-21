@@ -12,8 +12,6 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   nome text not null,
-  cpf text not null unique check (cpf ~ '^[0-9]{11}$'),
-  email text not null,
   whats text not null check (whats ~ '^[0-9]{11}$'),
   status text not null default 'pendente' check (status in ('pendente','confirmado')),
   lgpd_em timestamptz,
@@ -22,6 +20,18 @@ create table if not exists public.profiles (
   confirmado_em timestamptz,
   is_admin boolean not null default false
 );
+-- 2026-10-21: conta só com celular/WhatsApp (sem CPF, e-mail nem senha). Em bancos criados
+-- antes, CPF e e-mail deixam de ser obrigatórios e o app para de gravá-los.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='cpf') then
+    alter table public.profiles alter column cpf drop not null;
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='email') then
+    alter table public.profiles alter column email drop not null;
+  end if;
+end $$;
+-- o celular é o login: um por conta
+create unique index if not exists profiles_whats_key on public.profiles (whats);
 
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
@@ -44,23 +54,15 @@ drop trigger if exists trava_admin on public.profiles;
 create trigger trava_admin before insert or update on public.profiles
   for each row execute function public.trava_admin();
 
--- login por CPF: devolve o e-mail da conta para entrar com senha
-create or replace function public.email_do_login(ident text) returns text
+-- login/cadastro pelo celular: diz se o número já tem conta (sem expor dados)
+drop function if exists public.email_do_login(text);
+drop function if exists public.cadastro_em_uso(text, text);
+create or replace function public.whats_em_uso(p_whats text) returns boolean
 language sql stable security definer set search_path = public as $$
-  select email from public.profiles
-  where cpf = regexp_replace(ident, '\D', '', 'g') or lower(email) = lower(trim(ident))
-  limit 1
+  select exists (select 1 from public.profiles
+    where whats = regexp_replace(p_whats, '\D', '', 'g') and id is distinct from auth.uid())
 $$;
--- cadastro: avisa se CPF ou e-mail já estão em uso (sem expor dados)
-create or replace function public.cadastro_em_uso(p_cpf text, p_email text) returns text
-language sql stable security definer set search_path = public as $$
-  select case
-    when exists (select 1 from public.profiles where cpf = p_cpf and id is distinct from auth.uid()) then 'cpf'
-    when exists (select 1 from public.profiles where lower(email) = lower(p_email) and id is distinct from auth.uid()) then 'email'
-  end
-$$;
-grant execute on function public.email_do_login(text) to anon, authenticated;
-grant execute on function public.cadastro_em_uso(text, text) to anon, authenticated;
+grant execute on function public.whats_em_uso(text) to anon, authenticated;
 
 -- ---------- postos (rede) ----------
 create table if not exists public.postos (
@@ -229,5 +231,5 @@ create or replace view public.uso_por_dia with (security_invoker = on) as
   from public.eventos group by 1, 2 order by 1 desc, 3 desc;
 grant select on public.uso_por_dia to authenticated;
 
--- Depois de criar sua conta no app, torne-se administrador (troque o e-mail):
--- update public.profiles set is_admin = true where email = 'seu-email@exemplo.com';
+-- Depois de criar sua conta no app, torne-se administrador (troque pelo seu celular, só números):
+-- update public.profiles set is_admin = true where whats = '11987654321';

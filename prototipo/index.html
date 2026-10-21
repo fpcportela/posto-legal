@@ -260,52 +260,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="card" id="cadLoading"><p class="note">Carregando sua conta…</p></div>
     <form class="card" id="loginForm" hidden novalidate>
       <h2>Entrar</h2>
-      <p class="note">Para usar o Posto Legal é obrigatório ter uma conta. Entre com seu CPF ou e-mail e sua senha. Depois, confirme o código enviado ao seu WhatsApp.</p>
-      <label>CPF ou e-mail<input id="lg-id" autocomplete="username" placeholder="000.000.000-00 ou voce@email.com"></label>
-      <label>Senha<input id="lg-senha" type="password" autocomplete="current-password"></label>
-      <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
+      <p class="note">Para usar o Posto Legal é obrigatório ter uma conta. Informe o celular com WhatsApp da sua conta e digite o código que enviamos para ele.</p>
+      <label>Celular (WhatsApp)<input id="lg-whats" inputmode="tel" autocomplete="tel-national" placeholder="(11) 98765-4321" maxlength="15"></label>
       <div class="note" id="lgErr" style="color:var(--bad)"></div>
-      <button class="btn block" type="submit">Entrar</button>
-      <div class="row between"><button class="btn ghost small" type="button" id="lgEsqueci">Esqueci minha senha</button><button class="btn ghost small" type="button" id="lgCriar">Criar conta</button></div>
-    </form>
-    <form class="card" id="esqForm" hidden novalidate>
-      <h2>Recuperar senha</h2>
-      <p class="note" id="eqIntro">Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.</p>
-      <label>CPF ou e-mail<input id="eq-id" autocomplete="username"></label>
-      <div class="note" id="eqErr" style="color:var(--bad)"></div>
-      <div class="note" id="eqOk" style="color:var(--good)"></div>
-      <div class="row"><button class="btn" type="submit">Enviar código</button><button class="btn ghost" type="button" id="eqVoltar">Voltar</button></div>
-    </form>
-    <form class="card" id="senhaForm" hidden novalidate>
-      <h2>Crie uma nova senha</h2>
-      <label>Nova senha<input id="ns-senha" type="password" autocomplete="new-password"></label>
-      <label>Repita a nova senha<input id="ns-senha2" type="password" autocomplete="new-password"></label>
-      <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
-      <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
-      <div class="note" id="nsErr" style="color:var(--bad)"></div>
-      <button class="btn block" type="submit">Salvar senha e entrar</button>
+      <button class="btn block" type="submit">Receber código no WhatsApp</button>
+      <div class="row between"><span class="note">Ainda não tem conta?</span><button class="btn ghost small" type="button" id="lgCriar">Criar conta</button></div>
     </form>
     <form class="card" id="cadForm" hidden novalidate>
       <h2 id="cadTit">Crie sua conta</h2>
       <p class="note" id="cadIntro">Para usar o Posto Legal é obrigatório criar sua conta. Com ela você registra abastecimentos, vê o mapa e avalia postos. A confirmação é feita pelo WhatsApp.</p>
       <label>Nome completo<input id="cd-nome" autocomplete="name"></label>
-      <label>CPF<input id="cd-cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"></label>
-      <label>E-mail<input id="cd-email" type="email" autocomplete="email" placeholder="voce@email.com"></label>
-      <label>WhatsApp<input id="cd-whats" inputmode="tel" placeholder="(11) 98765-4321" maxlength="15"></label>
-      <div id="cadSenhas" class="hist">
-        <label>Senha<input id="cd-senha" type="password" autocomplete="new-password"></label>
-        <label>Repita a senha<input id="cd-senha2" type="password" autocomplete="new-password"></label>
-        <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
-        <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
-      </div>
-      <label class="check"><input type="checkbox" id="cd-lgpd">Concordo com o uso dos meus dados para criar a conta e com o registro do meu uso do app (telas, abastecimentos e avaliações) para análise e melhoria do serviço, conforme a LGPD. CPF, e-mail e WhatsApp não aparecem para outros motoristas.</label>
+      <label>Celular (WhatsApp)<input id="cd-whats" inputmode="tel" autocomplete="tel-national" placeholder="(11) 98765-4321" maxlength="15"></label>
+      <p class="note" id="cdWhatsNota">É com este número que você entra no app: a cada acesso enviamos um código para ele.</p>
+      <label class="check"><input type="checkbox" id="cd-lgpd">Concordo com o uso dos meus dados para criar a conta e com o registro do meu uso do app (telas, abastecimentos e avaliações) para análise e melhoria do serviço, conforme a LGPD. Seu número de WhatsApp não aparece para outros motoristas.</label>
       <div class="note" id="cadErr" style="color:var(--bad)"></div>
       <div class="row"><button class="btn" type="submit">Continuar</button><button class="btn ghost" type="button" id="cadCancel" hidden>Cancelar</button><button class="btn ghost" type="button" id="cadEntrar" hidden>Já tenho conta</button></div>
     </form>
     <form class="card" id="cadCode" hidden novalidate>
       <h2>Confirme pelo WhatsApp</h2>
       <p class="note" id="codeMsg"></p>
-      <div class="demo"><span><b>Simulação do protótipo.</b> No app real o código chega por mensagem no WhatsApp. Aqui ele aparece na tela: <b id="codeDemo" class="score"></b></span></div>
+      <div class="demo" id="codeDemoBox"><span><b>Simulação do protótipo.</b> No app real o código chega por mensagem no WhatsApp. Aqui ele aparece na tela: <b id="codeDemo" class="score"></b></span></div>
       <label>Código de 6 dígitos<input id="cd-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:1.4rem;letter-spacing:.3em;text-align:center"></label>
       <div class="note" id="codeErr" style="color:var(--bad)"></div>
       <button class="btn block" type="submit" id="codeBtn">Confirmar conta</button>
@@ -496,20 +470,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="card" id="contaCard"></div>
     <div class="kpis" id="contaKpis"></div>
     <div class="card" id="usoCard" hidden><div class="row between"><h3>Uso do app</h3><button class="btn ghost small" type="button" id="usoAtual">Atualizar</button></div><div id="usoBody" style="display:grid;gap:10px"><p class="note">Carregando…</p></div></div>
-    <form class="card" id="trocaSenha" novalidate>
-      <h3 id="tsTit">Alterar senha</h3>
-      <label id="tsAtualL">Senha atual<input id="ts-atual" type="password" autocomplete="current-password"></label>
-      <div class="two">
-        <label>Nova senha<input id="ts-nova" type="password" autocomplete="new-password"></label>
-        <label>Repita a nova senha<input id="ts-nova2" type="password" autocomplete="new-password"></label>
-      </div>
-      <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
-      <div class="note" id="tsErr" style="color:var(--bad)"></div>
-      <div><button class="btn ghost" type="submit" id="tsBtn">Alterar senha</button></div>
-    </form>
     <div class="card" id="sairCard">
       <h3>Sair</h3>
-      <p class="note">Ao sair, o app volta para a tela de entrada. Para entrar de novo, use seu CPF ou e-mail e a senha, e confirme o código no WhatsApp. Seus dados ficam guardados na sua conta.</p>
+      <p class="note">Ao sair, o app volta para a tela de entrada. Para entrar de novo, informe seu celular e digite o código que enviamos pelo WhatsApp. Seus dados ficam guardados na sua conta.</p>
       <div><button class="btn ghost" id="sairBtn">Sair da conta</button></div>
     </div>
   </section>
@@ -542,7 +505,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     </div>
     <div class="card" id="adminCard" hidden>
       <div class="row between"><h3>Usuários cadastrados</h3><span class="note">Visível só para você, dono do app</span></div>
-      <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Nome</th><th>CPF</th><th>E-mail</th><th>WhatsApp</th><th>Situação</th><th>Cadastro</th></tr></thead><tbody id="userRows"></tbody></table></div>
+      <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Nome</th><th>WhatsApp</th><th>Situação</th><th>Cadastro</th></tr></thead><tbody id="userRows"></tbody></table></div>
     </div>
   </section>
 </div>
@@ -721,7 +684,7 @@ function lsSave(){
 }
 /* ---------- banco online (Supabase) ---------- */
 let sb=null;
-const SESSAO=Math.random().toString(36).slice(2,10),LS_2FA=LS+"-2fa",LS_COD=LS+"-cod-";
+const SESSAO=Math.random().toString(36).slice(2,10);
 const comLogin=()=>S.mode==="local"||S.mode==="supa";
 const nOuNulo=v=>v==null||v===""?null:Number(v);
 // registro de uso: só no banco online; nunca atrapalha o app se falhar
@@ -730,8 +693,8 @@ function track(tipo,dados){
   try{sb.from("eventos").insert({user_id:S.uid||null,sessao:SESSAO,tipo,dados:dados||null,tela:S.tela||null,agente:navigator.userAgent.slice(0,180)}).then(()=>{},()=>{})}catch(e){}
 }
 function carregarScript(src){return new Promise((ok,falha)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>falha(new Error("script"));document.head.appendChild(s)})}
-const perfilDe=r=>({nome:r.nome,cpf:r.cpf,email:r.email,whats:r.whats,status:r.status,lgpdEm:r.lgpd_em,criadoEm:r.criado_em,atualizadoEm:r.atualizado_em,confirmadoEm:r.confirmado_em,isAdmin:r.is_admin});
-const perfilLinha=c=>({id:S.uid,nome:c.nome,cpf:c.cpf,email:c.email,whats:c.whats,status:c.status,lgpd_em:c.lgpdEm||null,criado_em:c.criadoEm||undefined,confirmado_em:c.confirmadoEm||null});
+const perfilDe=r=>({nome:r.nome,whats:r.whats,status:r.status,lgpdEm:r.lgpd_em,criadoEm:r.criado_em,atualizadoEm:r.atualizado_em,confirmadoEm:r.confirmado_em,isAdmin:r.is_admin});
+const perfilLinha=c=>({id:S.uid,nome:c.nome,whats:c.whats,status:c.status,lgpd_em:c.lgpdEm||null,criado_em:c.criadoEm||undefined,confirmado_em:c.confirmadoEm||null});
 const abDe=r=>{const a={id:r.id,veiculoId:r.veiculo_id,postoId:r.posto_id,postoNome:r.posto_nome,km:Number(r.km),comb:r.comb,preco:nOuNulo(r.preco),total:nOuNulo(r.total),litros:nOuNulo(r.litros),cheio:!!r.cheio,data:r.data};
   if(r.media!=null)a.media=Number(r.media);if(r.estrelas!=null)a.estrelas=Number(r.estrelas);if(r.obs)a.obs=r.obs;if(r.km_l!=null)a.kmL=Number(r.km_l);if(r.avaliado_em)a.avaliadoEm=r.avaliado_em;return a};
 const abLinha=a=>({id:a.id,user_id:S.uid,veiculo_id:a.veiculoId,veiculo_modelo:((S.gar.veiculos||[]).find(v=>v.id===a.veiculoId)||{}).modelo||null,posto_id:a.postoId,posto_nome:a.postoNome,km:a.km,comb:a.comb,preco:a.preco,total:a.total,litros:a.litros,cheio:!!a.cheio,
@@ -754,10 +717,8 @@ async function carregarMeus(){
   const d=g.data&&g.data.dados;S.gar=d&&d.veiculos?{...garPadrao(),...d}:garPadrao();S.mine=ab.data.map(abDe);
 }
 async function entrarSupa(uid){
-  S.uid=uid;const f=lsGet(LS_2FA,null);
-  if(f&&f.uid===uid){S.fluxo=f;S.conta=null;return} // falta o código do WhatsApp deste login
-  let c=await carregarPerfil(uid);
-  if(c&&c.status!=="confirmado"){const k=lsGet(LS_COD+uid,null)||{codigo:novoCodigo(),tentativas:0};c={...c,...k};lsSet(LS_COD+uid,k)}
+  S.uid=uid;
+  const c=await carregarPerfil(uid); // sem perfil: o número já foi confirmado, falta completar o cadastro
   S.conta=c;S.isOwner=!!(c&&c.isAdmin);
   if(contaConfirmada()){await Promise.all([carregarRede(),carregarMeus()]);if(S.isOwner)carregarAdmin()}
 }
@@ -766,9 +727,8 @@ async function initSupa(){
   S.mode="supa";S.contaOk=false;S.uid=null;S.conta=null;gate();$("#status").textContent="Conectando…";
   await carregarScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js");
   sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  sb.auth.onAuthStateChange((ev,sess)=>{if(ev==="PASSWORD_RECOVERY"&&sess){S.uid=sess.user.id;S.conta=null;S.fluxo={tipo:"recuperar",etapa:"senha",uid:sess.user.id};S.contaOk=true;gate()}});
   const {data:{session},error}=await sb.auth.getSession();if(error)throw error;
-  if(session&&!(S.fluxo&&S.fluxo.tipo==="recuperar"))await entrarSupa(session.user.id);
+  if(session){S.sessWhats=whatsDoTel(session.user.phone);await entrarSupa(session.user.id)}
   S.auth="login";S.contaOk=true;$("#status").innerHTML="Online";renderAll();gate();
   track("app_aberto",{instalado:matchMedia("(display-mode: standalone)").matches,largura:innerWidth});
   setInterval(()=>{if(!document.hidden)atualizarRede()},6e4);
@@ -782,7 +742,7 @@ async function carregarAdmin(){
 }
 const ROT_EV={app_aberto:"Abriu o app",tela:"Abriu uma tela",cadastro_enviado:"Enviou cadastro",conta_confirmada:"Confirmou a conta",login:"Entrou",logout:"Saiu",
   posto_cadastrado:"Cadastrou posto",abastecimento_salvo:"Registrou abastecimento",mapa_posto_aberto:"Abriu posto no mapa",gps_aviso:"Ligou/desligou GPS",
-  gps_pergunta:"Recebeu “Vai abastecer?”",gps_resposta:"Respondeu “Vai abastecer?”",endereco_escolhido:"Usou busca de endereço",senha_link_pedido:"Pediu nova senha",senha_recuperada:"Criou nova senha",senha_alterada:"Alterou a senha"};
+  gps_pergunta:"Recebeu “Vai abastecer?”",gps_resposta:"Respondeu “Vai abastecer?”",endereco_escolhido:"Usou busca de endereço",codigo_pedido:"Pediu código no WhatsApp"};
 async function renderUso(forcar){
   if(!sb||!S.isOwner){$("#usoCard").hidden=true;return}
   $("#usoCard").hidden=false;
@@ -835,7 +795,7 @@ async function savePub(items,ids){const nome=primeiroNome();
   if(sb){const rows=items.filter(i=>!ids||ids.includes(i.id)).map(i=>({id:i.id,user_id:S.uid,nome,posto_id:i.postoId,comb:i.comb,preco:i.preco??null,modelo:i.modelo||null,km_l:i.kmL??null,estrelas:i.estrelas||null,obs:i.obs||null,avaliado_em:i.avaliadoEm||null,data:i.data}));
     const {error}=await sb.from("avaliacoes").upsert(rows);if(error)throw error;S.pub[S.uid]=items;S.pubNome[S.uid]=nome;return}
   if(db)await db.doc("avaliacoes/"+S.uid).set({itens:items,nome});else{S.pub[S.uid]=items;S.pubNome[S.uid]=nome;lsSave()}}
-async function saveConta(c){if(sb){const {error}=await sb.from("profiles").upsert(perfilLinha(c));if(error)throw error;S.conta={...c,isAdmin:(S.conta||{}).isAdmin};lsSet(LS_COD+S.uid,c.codigo?{codigo:c.codigo,tentativas:c.tentativas||0}:null);return}if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
+async function saveConta(c){if(sb){const {error}=await sb.from("profiles").upsert(perfilLinha(c));if(error)throw error;S.conta={...c,isAdmin:(S.conta||{}).isAdmin};return}if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
 const primeiroNome=()=>((S.conta&&S.conta.nome)||"").trim().split(/\s+/)[0]||"";
 
 async function init(){
@@ -1528,58 +1488,40 @@ $("#saveCfg").onclick=async()=>{const n=k=>parseFloat($(k).value);
 $("#comb").innerHTML=$("#v-comb").innerHTML=$("#vi-comb").innerHTML=$("#mComb").innerHTML=COMBS.map(c=>`<option>${c}</option>`).join("");
 try{const t=localStorage.getItem(LS+"-tab");if(t&&document.getElementById("v-"+t))show(t)}catch(e){}
 /* ---------- CONTA / CADASTRO ---------- */
+/* Conta = nome + celular com WhatsApp. Não há CPF, e-mail nem senha: todo acesso é confirmado
+   por um código de 6 dígitos enviado ao WhatsApp.
+   - modo local: o código é simulado (aparece na tela);
+   - online: Supabase Auth por telefone (signInWithOtp, canal WhatsApp — precisa do provedor
+     Phone/Twilio ligado no painel do Supabase). */
 const soDig=s=>String(s||"").replace(/\D/g,"");
-function cpfOk(c){c=soDig(c);if(c.length!==11||/^(\d)\1+$/.test(c))return false;for(let t=9;t<11;t++){let s=0;for(let i=0;i<t;i++)s+=+c[i]*(t+1-i);if((s*10)%11%10!==+c[t])return false}return true}
-const fmtCpf=c=>{c=soDig(c).slice(0,11);if(c.length<=3)return c;if(c.length<=6)return c.slice(0,3)+"."+c.slice(3);if(c.length<=9)return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6);return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6,9)+"-"+c.slice(9)};
 const fmtWhats=w=>{w=soDig(w).slice(0,11);if(w.length<3)return w;const r=w.slice(2);return `(${w.slice(0,2)}) `+(w.length>10?r.slice(0,5)+"-"+r.slice(5):r.length>4?r.slice(0,4)+"-"+r.slice(4):r)};
-const mascCpf=c=>{c=soDig(c);return c.length===11?`***.${c.slice(3,6)}.${c.slice(6,9)}-**`:"—"};
+const whatsOk=w=>(w=soDig(w)).length===11&&w[2]==="9";
+const telDoWhats=w=>"+55"+soDig(w); // formato E.164 do Supabase Auth
+const whatsDoTel=t=>{t=soDig(t);return t.length===13&&t.startsWith("55")?t.slice(2):t};
+const ERRO_WHATS="Celular inválido. Use DDD + celular, ex.: (11) 98765-4321.";
 const contaConfirmada=()=>!!(S.conta&&S.conta.status==="confirmado");
 const novoCodigo=()=>String(Math.floor(100000+Math.random()*900000));
-function fillCadForm(c){$("#cd-nome").value=c.nome||"";$("#cd-cpf").value=fmtCpf(c.cpf);$("#cd-email").value=c.email||"";$("#cd-whats").value=fmtWhats(c.whats);$("#cd-lgpd").checked=!!c.lgpdEm}
-/* senha: SHA-256 com sal, repetido 3.000 vezes. No app real a senha fica no servidor (Supabase Auth / bcrypt). */
-function sha256(str){
-  const bytes=new TextEncoder().encode(str),rr=(v,n)=>(v>>>n)|(v<<(32-n)),H=[],K=[],comp={};
-  for(let c=2,i=0;i<64;c++){if(!comp[c]){for(let j=c*c;j<313;j+=c)comp[j]=1;if(i<8)H[i]=(Math.pow(c,.5)*2**32)|0;K[i++]=(Math.pow(c,1/3)*2**32)|0}}
-  const l=bytes.length,w=new Uint8Array(((l+9+63)>>6)<<6);w.set(bytes);w[l]=0x80;
-  const dv=new DataView(w.buffer);dv.setUint32(w.length-4,(l*8)>>>0);dv.setUint32(w.length-8,Math.floor(l*8/2**32));
-  let h=H.slice();const W=new Array(64);
-  for(let o=0;o<w.length;o+=64){
-    for(let t=0;t<16;t++)W[t]=dv.getUint32(o+t*4)|0;
-    for(let t=16;t<64;t++){const a=W[t-15],b=W[t-2];W[t]=((rr(a,7)^rr(a,18)^(a>>>3))+W[t-16]+(rr(b,17)^rr(b,19)^(b>>>10))+W[t-7])|0}
-    let [A,B,C,D,E,F,G,X]=h;
-    for(let t=0;t<64;t++){
-      const t1=(X+(rr(E,6)^rr(E,11)^rr(E,25))+((E&F)^(~E&G))+K[t]+W[t])|0,t2=((rr(A,2)^rr(A,13)^rr(A,22))+((A&B)^(A&C)^(B&C)))|0;
-      X=G;G=F;F=E;E=(D+t1)|0;D=C;C=B;B=A;A=(t1+t2)|0;
-    }
-    h=[A,B,C,D,E,F,G,X].map((x,i)=>(x+h[i])|0);
-  }
-  return h.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");
-}
-function hashSenha(senha,sal){let h=sal+":"+senha;for(let i=0;i<3000;i++)h=sha256(sal+h);return h}
-function novaSenha(senha){const sal=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");return {sal,hash:hashSenha(senha,sal)}}
-const senhaConfere=(c,senha)=>!!(c.senha&&hashSenha(senha,c.senha.sal)===c.senha.hash);
-const senhaErro=(a,b)=>a.length<8||!/[A-Za-z]/.test(a)||!/\d/.test(a)?"A senha precisa ter pelo menos 8 caracteres, com letras e números.":a!==b?"As senhas não conferem.":"";
+function fillCadForm(c){$("#cd-nome").value=c.nome||"";$("#cd-whats").value=fmtWhats(c.whats);$("#cd-lgpd").checked=!!c.lgpdEm}
 const whatsMasc=w=>{w=soDig(w);return w.length===11?`(${w.slice(0,2)}) *****-${w.slice(7)}`:fmtWhats(w)};
-function acharConta(v){
-  v=String(v||"").trim();const email=v.includes("@")?v.toLowerCase():null,cpf=soDig(v);
-  return Object.keys(CONTAS).find(id=>email?CONTAS[id].email===email:cpf.length===11&&CONTAS[id].cpf===cpf)||null;
-}
-function showCad(step){ // loading | login | esqueci | senha | form | code
+const acharConta=w=>{w=soDig(w);return w.length===11?Object.keys(CONTAS).find(id=>soDig(CONTAS[id].whats)===w)||null:null};
+function showCad(step){ // loading | login | form | code
   document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-cadastro");
   $("#sheet").hidden=true;if(!contaConfirmada())$("#gpsAsk").hidden=true;
-  const ids={loading:"#cadLoading",login:"#loginForm",esqueci:"#esqForm",senha:"#senhaForm",form:"#cadForm",code:"#cadCode"};
+  const ids={loading:"#cadLoading",login:"#loginForm",form:"#cadForm",code:"#cadCode"};
   for(const [k,sel] of Object.entries(ids))$(sel).hidden=k!==step;
 }
 function prepCode(){
-  const f=S.fluxo,local=comLogin();
+  const f=S.fluxo;
   if(f){
-    $("#codeMsg").innerHTML=`Para ${f.tipo==="login"?"entrar":"criar uma nova senha"}, digite o código que enviamos para o WhatsApp <b>${esc(whatsMasc(f.whats))}</b>.`;
-    $("#codeDemo").textContent=f.codigo;$("#codeBtn").textContent=f.tipo==="login"?"Entrar":"Continuar";$("#codeFix").hidden=true;
+    $("#codeMsg").innerHTML=`Para ${f.tipo==="login"?"entrar":"criar sua conta"}, digite o código que enviamos para o WhatsApp <b>${esc(f.tipo==="login"?whatsMasc(f.whats):fmtWhats(f.whats))}</b>.`;
+    $("#codeBtn").textContent=f.tipo==="login"?"Entrar":"Confirmar conta";$("#codeFix").hidden=f.tipo==="login";
   }else{
     $("#codeMsg").innerHTML=`Enviamos um código de 6 dígitos para o WhatsApp <b>${esc(fmtWhats(S.conta.whats))}</b>.`;
-    $("#codeDemo").textContent=S.conta.codigo||"";$("#codeBtn").textContent="Confirmar conta";$("#codeFix").hidden=false;
+    $("#codeBtn").textContent="Confirmar número";$("#codeFix").hidden=false;
   }
-  $("#codeVoltar").hidden=!local;
+  const demo=f?f.codigo:S.conta.codigo; // online o código chega de verdade e não fica no aparelho
+  $("#codeDemoBox").hidden=!demo;$("#codeDemo").textContent=demo||"";
+  $("#codeVoltar").hidden=!comLogin();
 }
 function gate(){
   const ok=contaConfirmada();
@@ -1588,158 +1530,123 @@ function gate(){
   if(S.editando)return;
   if(!ok){
     if(!S.contaOk){showCad("loading");return}
-    if(S.fluxo){if(S.fluxo.etapa==="senha")showCad("senha");else{prepCode();showCad("code")}return}
+    if(S.fluxo){prepCode();showCad("code");return}
     if(S.conta&&S.conta.status==="pendente"){prepCode();showCad("code");return}
     const completar=!!(sb&&S.uid&&!S.conta);
-    if(comLogin()&&S.auth!=="cadastro"&&!completar){
-      if(S.auth==="esqueci")$("#eqIntro").textContent=sb?"Informe seu CPF ou e-mail. Vamos enviar um link para o e-mail da conta para você criar uma nova senha.":"Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.";
-      showCad(S.auth==="esqueci"?"esqueci":"login");return}
+    if(comLogin()&&S.auth!=="cadastro"&&!completar){showCad("login");return}
     $("#cadTit").textContent=completar?"Complete seu cadastro":"Crie sua conta";$("#cadCancel").hidden=true;
-    $("#cadSenhas").hidden=!comLogin()||completar;$("#cadEntrar").hidden=!comLogin()||completar;showCad("form");
+    if(completar){$("#cd-whats").value=fmtWhats(S.sessWhats);$("#cd-whats").readOnly=true}
+    $("#cadEntrar").hidden=!comLogin()||completar;showCad("form");
   }else if(!$("#v-cadastro").hidden){show(S.pendTab||"painel")}
 }
-function irPara(auth){S.auth=auth;S.fluxo=null;["#lgErr","#eqErr","#nsErr","#cadErr","#codeErr"].forEach(x=>$(x).textContent="");gate()}
+function irPara(auth){S.auth=auth;S.fluxo=null;["#lgErr","#cadErr","#codeErr"].forEach(x=>$(x).textContent="");gate()}
 async function sair(msg){
   if(sb){track("logout");try{await sb.auth.signOut()}catch(e){}}
-  lsSet(LS_2FA,null);
-  S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="painel";S.isOwner=false;S.usuarios=[];
+  S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="painel";S.isOwner=false;S.usuarios=[];S.sessWhats=null;
   if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.susp={};S.pubNome={}}else entrarLocal(null);
-  fillCadForm({});["#lg-senha","#cd-senha","#cd-senha2","#cd-code"].forEach(x=>$(x).value="");
+  fillCadForm({});$("#cd-whats").readOnly=false;$("#cd-code").value="";
   if(msg)toast(msg);S.auth="login";renderAll();gate();
 }
 const sairLocal=sair;
 function editarConta(fromGaragem){
   S.editando=true;fillCadForm(S.conta||{});$("#cadErr").textContent="";
-  $("#cd-email").readOnly=!!sb; // no banco online o e-mail é o login; troca de e-mail fica para depois
+  $("#cd-whats").readOnly=!!sb; // online o número é o login; trocar de número fica para depois
+  $("#cdWhatsNota").textContent=sb?"O número é o seu login e não pode ser trocado por aqui.":"Se trocar o número, será preciso confirmar o novo pelo WhatsApp.";
   $("#cadTit").textContent=fromGaragem?"Alterar dados":"Corrija seus dados";$("#cadCancel").hidden=false;
-  $("#cadSenhas").hidden=$("#cadEntrar").hidden=true;showCad("form");
+  $("#cadEntrar").hidden=true;showCad("form");
 }
-document.querySelectorAll(".verSenha").forEach(cb=>cb.onchange=()=>cb.closest("form").querySelectorAll("input[type=password],input[data-senha]").forEach(i=>{i.dataset.senha=1;i.type=cb.checked?"text":"password"}));
-$("#cd-cpf").oninput=e=>e.target.value=fmtCpf(e.target.value);
-$("#cd-whats").oninput=e=>e.target.value=fmtWhats(e.target.value);
+$("#cd-whats").oninput=$("#lg-whats").oninput=e=>e.target.value=fmtWhats(e.target.value);
 $("#cd-code").oninput=e=>e.target.value=soDig(e.target.value).slice(0,6);
-$("#lg-id").oninput=$("#eq-id").oninput=e=>{const v=e.target.value;if(/^[\d.\-]+$/.test(v))e.target.value=fmtCpf(v)};
-$("#lgCriar").onclick=()=>{fillCadForm({});$("#cd-email").readOnly=false;$("#cd-senha").value=$("#cd-senha2").value="";irPara("cadastro")};
-$("#cadEntrar").onclick=()=>irPara("login");
-$("#lgEsqueci").onclick=()=>{$("#eq-id").value=$("#lg-id").value;$("#eqOk").textContent="";irPara("esqueci")};
-$("#eqVoltar").onclick=()=>irPara("login");
-$("#codeVoltar").onclick=()=>{if(S.fluxo&&!sb)irPara("login");else sair()};
-const emailMasc=e=>{const [u,d]=String(e||"").split("@");return d?u.slice(0,2)+"***@"+d:e};
-async function emailDoLogin(idv){const {data,error}=await sb.rpc("email_do_login",{ident:idv});if(error)throw error;return data}
+const NOTA_WHATS="É com este número que você entra no app: a cada acesso enviamos um código para ele.";
+$("#lgCriar").onclick=()=>{fillCadForm({whats:$("#lg-whats").value});$("#cd-whats").readOnly=false;$("#cdWhatsNota").textContent=NOTA_WHATS;irPara("cadastro")};
+$("#cadEntrar").onclick=()=>{$("#lg-whats").value=$("#cd-whats").value;irPara("login")};
+$("#codeVoltar").onclick=()=>{if(S.fluxo)irPara(S.fluxo.tipo==="login"?"login":"cadastro");else sair()};
+async function whatsEmUso(w){const {data,error}=await sb.rpc("whats_em_uso",{p_whats:soDig(w)});if(error)throw error;return !!data}
+// online: pede ao Supabase Auth o código pelo WhatsApp (cria o usuário só no cadastro)
+async function pedirCodigoSupa(w,criar){
+  const {error}=await sb.auth.signInWithOtp({phone:telDoWhats(w),options:{channel:"whatsapp",shouldCreateUser:criar}});
+  if(error)throw new Error(/rate|seconds|many/i.test(error.message)?"Aguarde um pouco antes de pedir outro código.":/provider|phone|sms|twilio/i.test(error.message)?"Envio pelo WhatsApp ainda não configurado no servidor.":error.message);
+  track("codigo_pedido",{tipo:criar?"cadastro":"login"});
+}
 $("#loginForm").onsubmit=async e=>{
-  e.preventDefault();const idv=$("#lg-id").value.trim(),senha=$("#lg-senha").value,err=$("#lgErr");
-  if(!idv||!senha){err.textContent="Informe o CPF ou e-mail e a senha.";return}
+  e.preventDefault();const whats=soDig($("#lg-whats").value),err=$("#lgErr");
+  if(!whatsOk(whats)){err.textContent=ERRO_WHATS;return}
   if(sb){
-    err.textContent="Entrando…";
+    err.textContent="Enviando código…";
     try{
-      const email=await emailDoLogin(idv);
-      if(!email){err.textContent="Não encontramos conta com este CPF ou e-mail.";return}
-      const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
-      if(error){err.textContent=/invalid/i.test(error.message)?"Senha incorreta.":/rate|many|seconds/i.test(error.message)?"Muitas tentativas. Aguarde alguns minutos e tente de novo.":"Não foi possível entrar: "+error.message;return}
-      const uid=data.user.id,c=await carregarPerfil(uid);
-      err.textContent="";$("#lg-senha").value="";
-      if(!c||c.status!=="confirmado"){await entrarSupa(uid);renderAll();gate();return}
-      S.uid=uid;S.conta=null;S.fluxo={tipo:"login",uid,whats:c.whats,codigo:novoCodigo(),tentativas:0};lsSet(LS_2FA,S.fluxo);
-      $("#cd-code").value="";$("#codeErr").textContent="";toast("Código enviado para o WhatsApp");gate();
-    }catch(x){err.textContent="Sem conexão com o servidor. Tente de novo."}
-    return}
-  const uid=acharConta(idv);if(!uid){err.textContent="Não encontramos conta com este CPF ou e-mail.";return}
-  const c=CONTAS[uid],agora=Date.now();
-  if(c.bloqueadoAte>agora){err.textContent=`Muitas tentativas erradas. Tente de novo em ${Math.ceil((c.bloqueadoAte-agora)/6e4)} min ou use “Esqueci minha senha”.`;return}
-  if(!c.senha){err.textContent="Esta conta ainda não tem senha. Use “Esqueci minha senha” para criar uma.";return}
-  if(!senhaConfere(c,senha)){
-    c.erros=(c.erros||0)+1;
-    if(c.erros>=5){c.erros=0;c.bloqueadoAte=agora+5*6e4;err.textContent="Senha incorreta. Por segurança, a conta ficou bloqueada por 5 minutos."}
-    else err.textContent=`Senha incorreta. Restam ${5-c.erros} tentativas.`;
-    lsSet(LS_CONTAS,CONTAS);return}
-  c.erros=0;delete c.bloqueadoAte;lsSet(LS_CONTAS,CONTAS);err.textContent="";$("#lg-senha").value="";
-  if(c.status!=="confirmado"){entrarLocal(uid);renderAll();gate();return}
+      if(!await whatsEmUso(whats)){err.textContent="Não encontramos conta com este celular. Toque em “Criar conta”.";return}
+      await pedirCodigoSupa(whats,false);
+    }catch(x){err.textContent=x.message&&!/fetch|network/i.test(x.message)?x.message:"Sem conexão com o servidor. Tente de novo.";return}
+    err.textContent="";S.fluxo={tipo:"login",whats,tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
+    toast("Código enviado para o WhatsApp");gate();return}
+  const uid=acharConta(whats);if(!uid){err.textContent="Não encontramos conta com este celular. Toque em “Criar conta”.";return}
+  const c=CONTAS[uid];err.textContent="";
+  if(c.status!=="confirmado"){entrarLocal(uid);renderAll();gate();return} // cadastro sem confirmar: segue na confirmação
   S.fluxo={tipo:"login",uid,whats:c.whats,codigo:novoCodigo(),tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
   toast("Código enviado para o WhatsApp");gate();
 };
-$("#esqForm").onsubmit=async e=>{
-  e.preventDefault();const idv=$("#eq-id").value.trim();$("#eqOk").textContent="";
-  if(sb){
-    $("#eqErr").textContent="Enviando…";
-    try{
-      const email=await emailDoLogin(idv);
-      if(!email){$("#eqErr").textContent="Não encontramos conta com este CPF ou e-mail.";return}
-      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-      if(error){$("#eqErr").textContent=/rate|seconds/i.test(error.message)?"Aguarde um pouco antes de pedir outro link.":"Não foi possível enviar: "+error.message;return}
-      $("#eqErr").textContent="";$("#eqOk").textContent=`Enviamos um link para ${emailMasc(email)}. Abra o e-mail neste aparelho e toque no link para criar a nova senha.`;track("senha_link_pedido");
-    }catch(x){$("#eqErr").textContent="Sem conexão com o servidor. Tente de novo."}
-    return}
-  const uid=acharConta(idv);
-  if(!uid){$("#eqErr").textContent="Não encontramos conta com este CPF ou e-mail.";return}
-  $("#eqErr").textContent="";S.fluxo={tipo:"recuperar",uid,whats:CONTAS[uid].whats,codigo:novoCodigo(),tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
-  toast("Código enviado para o WhatsApp");gate();
-};
-$("#senhaForm").onsubmit=async e=>{
-  e.preventDefault();const a=$("#ns-senha").value,b=$("#ns-senha2").value,erro=senhaErro(a,b);
-  $("#nsErr").textContent=erro;if(erro)return;
-  const uid=S.fluxo.uid;
-  if(sb){
-    const {error}=await sb.auth.updateUser({password:a});
-    if(error){$("#nsErr").textContent=/same|different/i.test(error.message)?"A nova senha precisa ser diferente da anterior.":"Não foi possível salvar: "+error.message;return}
-    S.fluxo=null;$("#ns-senha").value=$("#ns-senha2").value="";history.replaceState(null,"",location.pathname);
-    await entrarSupa(uid);renderAll();track("senha_recuperada");toast(`Senha criada. Bem-vindo, ${primeiroNome()}!`);gate();return}
-  const c=CONTAS[uid];
-  c.senha=novaSenha(a);c.erros=0;delete c.bloqueadoAte;
-  // o código no WhatsApp comprovou o número: uma conta pendente fica confirmada
-  if(c.status!=="confirmado"){c.status="confirmado";c.confirmadoEm=new Date().toISOString();delete c.codigo;delete c.tentativas}
-  lsSet(LS_CONTAS,CONTAS);S.fluxo=null;$("#ns-senha").value=$("#ns-senha2").value="";
-  entrarLocal(uid);renderAll();toast(`Senha criada. Bem-vindo, ${primeiroNome()}!`);gate();
-};
 $("#cadForm").onsubmit=async e=>{
   e.preventDefault();
-  const nome=$("#cd-nome").value.trim().replace(/\s+/g," "),cpf=soDig($("#cd-cpf").value),email=$("#cd-email").value.trim().toLowerCase(),whats=soDig($("#cd-whats").value);
+  const nome=$("#cd-nome").value.trim().replace(/\s+/g," "),whats=soDig($("#cd-whats").value);
   const nova=comLogin()&&!S.editando,completar=!!(sb&&S.uid&&!S.conta),outro=id=>id&&id!==S.uid;
-  let erro=nome.split(" ").length<2?"Informe nome e sobrenome.":!cpfOk(cpf)?"CPF inválido. Confira os números.":!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)?"E-mail inválido.":
-    !(whats.length===11&&whats[2]==="9")?"WhatsApp inválido. Use DDD + celular, ex.: (11) 98765-4321.":"";
-  if(!erro&&S.mode==="local"&&outro(acharConta(cpf)))erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
-  if(!erro&&S.mode==="local"&&outro(acharConta(email)))erro="Já existe uma conta com este e-mail.";
-  if(!erro&&nova&&!completar)erro=senhaErro($("#cd-senha").value,$("#cd-senha2").value);
+  let erro=nome.split(" ").length<2?"Informe nome e sobrenome.":!whatsOk(whats)?ERRO_WHATS:"";
+  if(!erro&&S.mode==="local"&&outro(acharConta(whats)))erro="Já existe uma conta com este celular. Toque em “Já tenho conta” para entrar.";
   if(!erro&&!$("#cd-lgpd").checked)erro="Marque a concordância com o uso dos dados.";
-  if(!erro&&sb){
+  if(!erro&&sb&&nova&&!completar){
     $("#cadErr").textContent="Verificando…";
-    try{const {data}=await sb.rpc("cadastro_em_uso",{p_cpf:cpf,p_email:email});
-      if(data==="cpf")erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
-      else if(data==="email")erro="Já existe uma conta com este e-mail.";
-    }catch(x){erro="Sem conexão com o servidor. Tente de novo."}
+    try{if(await whatsEmUso(whats))erro="Já existe uma conta com este celular. Toque em “Já tenho conta” para entrar."}
+    catch(x){erro="Sem conexão com o servidor. Tente de novo."}
   }
   $("#cadErr").textContent=erro;if(erro)return;
-  if(nova&&sb&&!S.uid){
-    $("#cadErr").textContent="Criando conta…";
-    const {data,error}=await sb.auth.signUp({email,password:$("#cd-senha").value});
-    if(error){$("#cadErr").textContent=/registered|exists/i.test(error.message)?"Este e-mail já tem conta. Entre com sua senha.":/rate|seconds/i.test(error.message)?"Muitas tentativas. Aguarde um pouco e tente de novo.":"Não foi possível criar a conta: "+error.message;return}
-    if(!data.session){$("#cadErr").textContent="Enviamos um e-mail de confirmação. Toque no link do e-mail e depois entre com sua senha.";return}
-    S.uid=data.user.id;$("#cadErr").textContent="";
-  }
+  const antes=S.conta||{},now=new Date().toISOString();
+  if(sb&&nova&&!completar){ // online: o usuário só existe depois de confirmar o código
+    $("#cadErr").textContent="Enviando código…";
+    try{await pedirCodigoSupa(whats,true)}catch(x){$("#cadErr").textContent=x.message||"Sem conexão com o servidor. Tente de novo.";return}
+    $("#cadErr").textContent="";S.fluxo={tipo:"cadastro",whats,nome,lgpdEm:now,tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
+    track("cadastro_enviado");toast("Código enviado para o WhatsApp");gate();return}
   if(nova&&!sb){S.uid="u"+Date.now();S.conta=null;S.mine=[];S.gar=garPadrao()}
-  const antes=S.conta||{},now=new Date().toISOString(),precisaConfirmar=antes.whats!==whats||antes.status!=="confirmado";
-  const c={...antes,nome,cpf,email,whats,lgpdEm:antes.lgpdEm||now,atualizadoEm:now,criadoEm:antes.criadoEm||now};
-  if(nova&&!sb)c.senha=novaSenha($("#cd-senha").value);
+  // online o número já foi confirmado pelo Supabase Auth; local/rede, só se não mudou
+  const confirmadoAuth=!!sb,precisaConfirmar=!confirmadoAuth&&(antes.whats!==whats||antes.status!=="confirmado");
+  const c={...antes,nome,whats,lgpdEm:antes.lgpdEm||now,atualizadoEm:now,criadoEm:antes.criadoEm||now};
+  delete c.cpf;delete c.email;delete c.senha;delete c.erros;delete c.bloqueadoAte; // restos do cadastro antigo
+  if(confirmadoAuth&&c.status!=="confirmado"){c.status="confirmado";c.confirmadoEm=now}
   if(precisaConfirmar){c.status="pendente";c.codigo=novoCodigo();c.tentativas=0;c.codigoEm=now;delete c.confirmadoEm}
-  try{await saveConta(c);if(nova&&!sb)lsSet(LS_SESSAO,S.uid);if(nova)track("cadastro_enviado");
-    S.editando=false;$("#cd-code").value="";$("#codeErr").textContent="";$("#cd-senha").value=$("#cd-senha2").value="";
-    if(precisaConfirmar){toast("Código enviado para o WhatsApp");gate()}else{toast("Dados atualizados");show("conta");renderGaragem()}}
+  try{await saveConta(c);if(nova&&!sb)lsSet(LS_SESSAO,S.uid);if(nova&&!completar)track("cadastro_enviado");
+    S.editando=false;$("#cd-whats").readOnly=false;$("#cd-code").value="";$("#codeErr").textContent="";
+    if(precisaConfirmar){toast("Código enviado para o WhatsApp");gate()}
+    else if(completar){await Promise.all([carregarRede(),carregarMeus()]);S.isOwner=!!(S.conta&&S.conta.isAdmin);renderAll();track("conta_confirmada");toast(`Conta criada. Bem-vindo, ${primeiroNome()}!`);gate()}
+    else{toast("Dados atualizados");show("conta");renderGaragem()}}
   catch(err){$("#cadErr").textContent="Não foi possível salvar: "+(err.message||err.code)}
 };
+async function confirmarFluxoSupa(f,code){
+  const {data,error}=await sb.auth.verifyOtp({phone:telDoWhats(f.whats),token:code,type:"sms"});
+  if(error){
+    if(/expired|invalid|token/i.test(error.message)){f.tentativas++;
+      $("#codeErr").textContent=f.tentativas>=5?"Muitas tentativas. Toque em “Reenviar código”.":/expired/i.test(error.message)?"Código vencido. Toque em “Reenviar código”.":`Código incorreto. Restam ${5-f.tentativas} tentativas.`}
+    else $("#codeErr").textContent="Não foi possível confirmar: "+error.message;
+    return}
+  const uid=data.user.id;S.fluxo=null;S.sessWhats=f.whats;$("#codeErr").textContent="";$("#cd-code").value="";
+  if(f.tipo==="cadastro"){S.uid=uid;S.conta=null;const now=new Date().toISOString();
+    await saveConta({nome:f.nome,whats:f.whats,status:"confirmado",lgpdEm:f.lgpdEm,criadoEm:now,atualizadoEm:now,confirmadoEm:now});
+    await Promise.all([carregarRede(),carregarMeus()]);renderAll();track("conta_confirmada");toast(`Conta criada. Bem-vindo, ${primeiroNome()}!`);gate();return}
+  await entrarSupa(uid);renderAll();track("login");toast(S.conta?`Bem-vindo de volta, ${primeiroNome()}!`:"Número confirmado. Complete seu cadastro.");gate();
+}
 $("#cadCode").onsubmit=async e=>{
   e.preventDefault();const code=$("#cd-code").value,f=S.fluxo;
   if(code.length!==6){$("#codeErr").textContent="Digite os 6 dígitos.";return}
+  if(f&&sb){
+    if(f.tentativas>=5){$("#codeErr").textContent="Muitas tentativas. Toque em “Reenviar código”.";return}
+    $("#codeErr").textContent="Confirmando…";
+    try{await confirmarFluxoSupa(f,code)}catch(x){$("#codeErr").textContent="Sem conexão com o servidor. Tente de novo."}
+    return}
   if(f){
     if(code!==f.codigo){
       f.tentativas++;
       if(f.tentativas>=5){f.codigo=novoCodigo();f.tentativas=0;$("#codeErr").textContent="Muitas tentativas. Enviamos um novo código."}
       else $("#codeErr").textContent=`Código incorreto. Restam ${5-f.tentativas} tentativas.`;
-      if(sb)lsSet(LS_2FA,f);gate();return}
+      gate();return}
     $("#codeErr").textContent="";$("#cd-code").value="";
-    if(f.tipo==="login"){
-      S.fluxo=null;lsSet(LS_2FA,null);
-      if(sb){try{await entrarSupa(f.uid)}catch(x){toast("Sem conexão com o servidor");return}}else entrarLocal(f.uid);
-      renderAll();track("login");toast(`Bem-vindo de volta, ${primeiroNome()}!`);gate()}
-    else{f.etapa="senha";gate();$("#ns-senha").focus()}
+    S.fluxo=null;entrarLocal(f.uid);renderAll();track("login");toast(`Bem-vindo de volta, ${primeiroNome()}!`);gate();
     return}
   const c={...S.conta};
   if(code!==c.codigo){
@@ -1752,29 +1659,19 @@ $("#cadCode").onsubmit=async e=>{
   const orf=S.mode==="local"?lsGet(LS_ORFAO,null):null;
   if(orf){S.mine=orf.mine||[];if(orf.gar)S.gar=orf.gar;if(orf.pub)S.pub[S.uid]=orf.pub;lsSet(LS_ORFAO,null)}
   try{await saveConta(c);
-    if(sb){await Promise.all([carregarRede(),carregarMeus()]);S.isOwner=!!S.conta.isAdmin}
     $("#codeErr").textContent="";$("#cd-code").value="";renderAll();track("conta_confirmada");
     toast(orf?"Conta confirmada. Seus veículos e abastecimentos anteriores agora estão nesta conta.":`Conta confirmada. Bem-vindo, ${primeiroNome()}!`);gate()}
   catch(err){$("#codeErr").textContent="Não foi possível confirmar: "+(err.message||err.code)}
 };
 $("#codeResend").onclick=async()=>{
-  if(S.fluxo){S.fluxo.codigo=novoCodigo();S.fluxo.tentativas=0;if(sb)lsSet(LS_2FA,S.fluxo);$("#codeErr").textContent="";toast("Novo código enviado");gate();return}
+  const f=S.fluxo;
+  if(f&&sb){try{await pedirCodigoSupa(f.whats,f.tipo==="cadastro");f.tentativas=0;$("#codeErr").textContent="";toast("Novo código enviado")}catch(x){$("#codeErr").textContent=x.message||"Não foi possível reenviar"}return}
+  if(f){f.codigo=novoCodigo();f.tentativas=0;$("#codeErr").textContent="";toast("Novo código enviado");gate();return}
   const c={...S.conta,codigo:novoCodigo(),tentativas:0,codigoEm:new Date().toISOString()};try{await saveConta(c);$("#codeErr").textContent="";toast("Novo código enviado");gate()}catch(err){toast("Não foi possível reenviar")}};
-$("#codeFix").onclick=()=>editarConta(false);
-$("#cadCancel").onclick=()=>{S.editando=false;$("#cd-email").readOnly=false;if(contaConfirmada()){show("conta")}else gate()};
+$("#codeFix").onclick=()=>{if(S.fluxo&&S.fluxo.tipo==="cadastro"){const f=S.fluxo;irPara("cadastro");fillCadForm({nome:f.nome,whats:f.whats,lgpdEm:f.lgpdEm})}else editarConta(false)};
+$("#cadCancel").onclick=()=>{S.editando=false;$("#cd-whats").readOnly=false;$("#cdWhatsNota").textContent=NOTA_WHATS;if(contaConfirmada()){show("conta")}else gate()};
 $("#contaBtn").onclick=()=>show("conta");
 $("#usoAtual").onclick=()=>carregarAdmin();
-$("#trocaSenha").onsubmit=async e=>{
-  e.preventDefault();const c=S.conta,a=$("#ts-nova").value,atual=$("#ts-atual").value;let erro=senhaErro(a,$("#ts-nova2").value);
-  if(sb){
-    if(!erro){const r=await sb.auth.signInWithPassword({email:c.email,password:atual});if(r.error)erro="Senha atual incorreta."}
-    if(!erro){const {error}=await sb.auth.updateUser({password:a});if(error)erro=/same|different/i.test(error.message)?"A nova senha precisa ser diferente da atual.":"Não foi possível salvar: "+error.message}
-    $("#tsErr").textContent=erro;if(erro)return;
-    $("#trocaSenha").reset();toast("Senha alterada");track("senha_alterada");return}
-  if(!erro&&c.senha&&!senhaConfere(c,atual))erro="Senha atual incorreta.";
-  $("#tsErr").textContent=erro;if(erro)return;
-  S.conta={...c,senha:novaSenha(a)};lsSave();$("#trocaSenha").reset();toast(c.senha?"Senha alterada":"Senha criada");renderConta();
-};
 $("#sairBtn").onclick=async e=>{const b=e.currentTarget;
   if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Confirmar: sair da conta";b.classList.remove("ghost");return}
   delete b.dataset.confirm;b.textContent="Sair da conta";b.classList.add("ghost");
@@ -1783,19 +1680,18 @@ function renderConta(){
   const c=S.conta;if(!c){$("#contaCard").hidden=true;return}
   $("#contaCard").hidden=false;
   $("#contaCard").innerHTML=`<div class="row between"><h3>Minha conta</h3><span class="pill ${c.status==="confirmado"?"ok":"wait"}">${c.status==="confirmado"?"WhatsApp confirmado":"Aguardando confirmação"}</span></div>
-    <dl class="kv"><dt>Nome</dt><dd>${esc(c.nome)}</dd><dt>CPF</dt><dd>${mascCpf(c.cpf)}</dd><dt>E-mail</dt><dd>${esc(c.email)}</dd><dt>WhatsApp</dt><dd>${esc(fmtWhats(c.whats))}</dd></dl>
-    <div><button class="btn ghost small" id="contaEdit">Alterar dados</button></div><p class="note">Se trocar o WhatsApp, será preciso confirmar o novo número.</p>`;
+    <dl class="kv"><dt>Nome</dt><dd>${esc(c.nome)}</dd><dt>WhatsApp</dt><dd>${esc(fmtWhats(c.whats))}</dd></dl>
+    <div><button class="btn ghost small" id="contaEdit">Alterar dados</button></div><p class="note">${sb?"O WhatsApp é o seu login: cada acesso é confirmado por um código enviado a ele.":"Se trocar o WhatsApp, será preciso confirmar o novo número."}</p>`;
   $("#contaEdit").onclick=()=>editarConta(true);
   const nAval=(S.pub[S.uid]||[]).filter(i=>i.estrelas).length;
   $("#contaKpis").innerHTML=`<div class="metric"><div class="k">Veículos</div><div class="v">${(S.gar.veiculos||[]).length}</div></div><div class="metric"><div class="k">Abastecimentos</div><div class="v">${S.mine.length}</div></div><div class="metric"><div class="k">Avaliações</div><div class="v">${nAval}</div></div>`;
-  $("#sairCard").hidden=$("#trocaSenha").hidden=!comLogin();
-  const temSenha=!!(sb||c.senha);$("#tsAtualL").hidden=!temSenha;$("#tsTit").textContent=$("#tsBtn").textContent=temSenha?"Alterar senha":"Criar senha";
+  $("#sairCard").hidden=!comLogin();
   if(S.isOwner&&sb&&S.tela==="conta")renderUso();
 }
 function renderAdmin(){
   $("#adminCard").hidden=!S.isOwner;if(!S.isOwner)return;
   const u=S.usuarios.slice().sort((a,b)=>(b.criadoEm||"").localeCompare(a.criadoEm||""));
-  $("#userRows").innerHTML=u.length?u.map(x=>`<tr><td>${esc(x.nome)}</td><td>${esc(fmtCpf(x.cpf))}</td><td>${esc(x.email)}</td><td>${esc(fmtWhats(x.whats))}</td><td><span class="pill ${x.status==="confirmado"?"ok":"wait"}">${x.status==="confirmado"?"Confirmado":"Pendente"}</span></td><td>${fdata(x.criadoEm)}</td></tr>`).join(""):'<tr><td colspan="6" class="note">Nenhum usuário cadastrado ainda.</td></tr>';
+  $("#userRows").innerHTML=u.length?u.map(x=>`<tr><td>${esc(x.nome)}</td><td>${esc(fmtWhats(x.whats))}</td><td><span class="pill ${x.status==="confirmado"?"ok":"wait"}">${x.status==="confirmado"?"Confirmado":"Pendente"}</span></td><td>${fdata(x.criadoEm)}</td></tr>`).join(""):'<tr><td colspan="4" class="note">Nenhum usuário cadastrado ainda.</td></tr>';
 }
 
 init();

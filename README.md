@@ -30,24 +30,22 @@ O protótipo tem todo o fluxo. O mapa e o GPS funcionam no navegador (melhor abr
 - `data/users/<usuario>/garagem`: veículos e configuração dos alertas. Privado.
 - `data/users/<usuario>/ab-*`: abastecimentos (km, litros, total, média). Privado.
 
-- `cadastros/<usuario>`: nome, CPF, e-mail, WhatsApp, status (`pendente`/`confirmado`), data do aceite LGPD. Cada usuário lê e escreve só o próprio; o dono do app lê todos (tabela "Usuários cadastrados" na Garagem).
+- `cadastros/<usuario>`: nome, celular (WhatsApp), status (`pendente`/`confirmado`), data do aceite LGPD. Cada usuário lê e escreve só o próprio; o dono do app lê todos (tabela "Usuários cadastrados" na Garagem).
 
 ### Cadastro e confirmação
-O cadastro é obrigatório: o app só libera as abas, o mapa e o aviso por GPS depois que a conta é confirmada. Depois disso, o botão com o primeiro nome no topo abre **Minha conta** (dados com CPF mascarado, "Alterar dados", totais de veículos, abastecimentos e avaliações e, no modo local, "Sair da conta" com confirmação). CPF validado pelos dígitos verificadores; WhatsApp exige DDD + celular (11 dígitos). Código de 6 dígitos, 5 tentativas, reenviar e corrigir número. Trocar o WhatsApp exige nova confirmação.
+O cadastro é obrigatório: o app só libera as abas, o mapa e o aviso por GPS depois que a conta é confirmada. Depois disso, o botão com o primeiro nome no topo abre **Minha conta** (nome e WhatsApp, "Alterar dados", totais de veículos, abastecimentos e avaliações e, no modo local, "Sair da conta" com confirmação). A conta tem só **nome e celular com WhatsApp** (DDD + celular, 11 dígitos; um por conta). Não há CPF, e-mail nem senha. Código de 6 dígitos, 5 tentativas, reenviar e corrigir número. Trocar o WhatsApp exige nova confirmação.
 
 ### Login (modo local)
-- Entrar com **CPF ou e-mail + senha** e, em seguida, o **código de 6 dígitos no WhatsApp** (dois passos em todo login).
-- Senha: mínimo de 8 caracteres com letras e números. 5 senhas erradas bloqueiam a conta por 5 minutos.
-- **Esqueci minha senha**: CPF ou e-mail → código no WhatsApp → nova senha → entra.
-- Minha conta tem **Alterar senha** (pede a senha atual) e **Sair da conta**.
+- Entrar com o **celular** e o **código de 6 dígitos enviado ao WhatsApp** (sem senha; 5 tentativas, reenviar código).
+- Minha conta tem **Sair da conta**.
 - Cada conta do aparelho tem seus próprios veículos e abastecimentos (`posto-legal-v1-u-<id>`). Postos e avaliações são compartilhados entre as contas, simulando a rede. Contas em `posto-legal-v1-contas`, sessão em `posto-legal-v1-sessao`.
-- A senha é guardada só como hash (SHA-256 com sal, 3.000 rodadas). Isso é só para o protótipo: no app real, quem cuida da senha é o servidor (Supabase Auth), e o código do WhatsApp é gerado e conferido lá.
+- Contas antigas (com CPF, e-mail e senha) continuam entrando pelo celular cadastrado; ao alterar os dados, CPF, e-mail e senha são descartados.
 - Os dados da versão sem login (veículos e abastecimentos de quem já tinha saído) passam para a primeira conta criada no aparelho.
 
 **No protótipo o envio pelo WhatsApp é simulado** (o código aparece na tela). No app real:
-- Backend (ex.: Supabase Edge Function) gera o código, guarda só o hash com validade de 10 min e envia pela **WhatsApp Business Cloud API (Meta)** com um modelo de mensagem da categoria *Autenticação* (precisa de conta Business verificada e número próprio).
+- O **Supabase Auth por telefone** gera e confere o código (`signInWithOtp` / `verifyOtp`, canal WhatsApp). O envio sai pelo provedor configurado no Supabase: Twilio (WhatsApp) ou um *Send SMS Hook* chamando uma Edge Function com a **WhatsApp Business Cloud API (Meta)** e um modelo da categoria *Autenticação* (conta Business verificada e número próprio).
 - O código nunca vai para o aparelho do usuário pelo banco; a verificação acontece no servidor.
-- CPF único por conta (índice único no banco) e limite de envios por número/IP.
+- Celular único por conta (índice único no banco) e limite de envios do próprio Supabase Auth.
 
 ### Regra da média
 É o método do tanque cheio: km/l = (km atual − km anterior) ÷ litros do abastecimento atual. Só vale quando o tanque foi completado nos dois abastecimentos. A média é atribuída ao posto **anterior**, porque foi o combustível dele que rodou esses km.
@@ -70,8 +68,7 @@ O posto é avaliado (estrelas + comentário) sempre no abastecimento **seguinte*
 Com `SUPABASE_URL` e `SUPABASE_KEY` preenchidos no topo do script de `prototipo/index.html`, o app passa a usar o banco online; vazios, roda no modo local.
 
 - Script do banco: `supabase/schema.sql` (tabelas `profiles`, `postos`, `garagem`, `abastecimentos`, `avaliacoes`, `eventos` e a visão `uso_por_dia`, com regras de acesso RLS).
-- Login pelo Supabase Auth (e-mail + senha; o CPF é convertido no e-mail da conta pela função `email_do_login`). Depois da senha continua o código do WhatsApp (ainda simulado).
-- "Esqueci minha senha" no modo online manda um **link por e-mail** (o código do WhatsApp para recuperar senha precisa de servidor próprio).
+- Login e cadastro pelo Supabase Auth **por telefone**: o app pede o código (`signInWithOtp`, canal WhatsApp) e confere (`verifyOtp`). A função `whats_em_uso` diz se o celular já tem conta. No cadastro, o perfil só é gravado depois que o número é confirmado. Trocar de número no modo online ainda não está disponível.
 - Eventos de uso gravados em `eventos`: abriu o app, telas, cadastro, login/saída, posto cadastrado, abastecimento, mapa, GPS, busca de endereço.
-- Administrador: `update public.profiles set is_admin = true where email = '...';` no SQL Editor. O administrador vê em Minha conta o cartão "Uso do app" e, na Garagem, a tabela de usuários.
-- Configuração do Auth: desligar "Confirm email" (Authentication → Sign In / Providers → Email) e colocar o endereço do app em Authentication → URL Configuration (Site URL e Redirect URLs).
+- Administrador: `update public.profiles set is_admin = true where whats = '11987654321';` no SQL Editor. O administrador vê em Minha conta o cartão "Uso do app" e, na Garagem, a tabela de usuários.
+- Configuração do Auth: ligar o provedor **Phone** (Authentication → Sign In / Providers → Phone) com Twilio/WhatsApp ou com um Send SMS Hook (Edge Function da Meta). Sem isso o modo online não consegue enviar o código. O provedor Email pode ficar desligado.
