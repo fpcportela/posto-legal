@@ -1,0 +1,87 @@
+# CI de PR do Posto Legal, a partir de aiteam/templates/ci.yml.example (aiteam/AGENTS.md §CI/CD Mandate, item 1).
+#   - framework: valida o aiteam/ vendorizado, no diretório dele;
+#   - app: roda na raiz o comando do bloco ci: do SPEC.md (test: npm test), que testa prototipo/regras.js.
+# Sem filtro de paths, por decisão do framework: todo PR passa por aqui.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  framework:
+    name: Framework (aiteam) — typecheck, schemas e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: aiteam
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: aiteam/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Validate .beads schema
+        run: npm run validate:beads
+
+      - name: Validate persona → subagent bindings
+        run: npm run validate:agents
+
+      - name: Validate eval YAML schemas
+        run: |
+          set -e
+          shopt -s nullglob
+          for f in evals/*.eval.yaml prompts/*.eval.yaml; do
+            echo "→ Validating $f"
+            node --input-type=module -e "
+              import yaml from 'js-yaml';
+              import fs from 'fs';
+              const doc = yaml.load(fs.readFileSync('$f', 'utf8'));
+              for (const k of ['id', 'prompt_file', 'description', 'input', 'expected_behavior', 'pass_criteria']) {
+                if (!(k in doc)) { console.error('  ✗ Missing required field:', k); process.exit(1); }
+              }
+              console.log('  ✓', doc.id);
+            "
+          done
+
+      - name: Run unit tests
+        run: npm run test
+
+  app:
+    name: App — testes das regras
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests (ci.test)
+        run: npm test

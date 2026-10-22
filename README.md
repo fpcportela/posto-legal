@@ -4,13 +4,15 @@ App para motoristas registrarem abastecimentos, acompanharem a média de km/l e 
 
 ## Protótipo (navegador)
 
-- Arquivo: `prototipo/index.html`
+- Arquivos: `prototipo/index.html` e `prototipo/regras.js` (as regras de negócio, carregadas pelo `index.html`; os dois vão juntos para onde o protótipo for publicado — no artifact do claude.ai, o `regras.js` entra como arquivo de apoio).
 - Publicado em: https://claude.ai/artifact/W2fjPF3TGaFpwnze3xso7s
 
 O protótipo tem todo o fluxo. O mapa e o GPS funcionam no navegador (melhor abrindo o arquivo direto, já que a página publicada bloqueia a localização e as imagens do mapa).
 
 ### Mapa (aba Mapa)
 - Mapa Leaflet com fundo do OpenStreetMap (tiles padrão escurecidos por filtro CSS; o CARTO passou a exigir chave em 2026). Cada posto com localização vira um marcador com a nota (★) e o preço do combustível escolhido.
+- O fundo é escolhido em `MAPA_FUNDO`, no script do `index.html`: `"osm"` (padrão, só para testes — a política de uso do OpenStreetMap não aceita o tráfego de um app) ou `"stadia"` (Stadia Maps, fundo escuro pronto; crie a conta grátis e cadastre lá o domínio do site).
+- O Leaflet só é baixado quando o mapa é aberto (ou com o navegador ocioso, depois que o app abriu). Os marcadores são reaproveitados entre um desenho e outro: mover o mapa só cria os que entraram na área visível e remove os que saíram.
 - Veículo e combustível no topo: o combustível começa pelo "combustível usual" do veículo e pode ser trocado. Opção "só postos com preço deste combustível".
 - Cor do marcador segue os limites de "Alertas de reputação" da Garagem: verde (ótimo), amarelo (regular ou poucas avaliações), vermelho (péssimo), cinza (sem nota).
 - Tocar no posto abre um painel com nota, preço do combustível do veículo, rendimento relatado com esse combustível, resumo de elogios e reclamações, e os botões "Abastecer aqui" e "Todas as avaliações".
@@ -57,6 +59,24 @@ No Histórico e nos "Últimos abastecimentos" do Painel, tocar num abastecimento
 ### Regra da avaliação
 O posto é avaliado (estrelas + comentário) sempre no abastecimento **seguinte** do mesmo veículo, depois de rodar com o combustível dele. No primeiro abastecimento de um veículo não há avaliação. A nota é obrigatória a partir do segundo.
 
+## Instalar no celular (PWA)
+
+- Publicado no GitHub Pages, o protótipo pode ser instalado como app: no Android (Chrome), menu ⋮ → "Instalar app"; no iPhone (Safari), Compartilhar → "Adicionar à Tela de Início". Abre em tela cheia, com ícone próprio.
+- Arquivos: `prototipo/manifest.webmanifest`, `prototipo/sw.js` (service worker), `prototipo/icone.svg` e `prototipo/icones/`.
+- O service worker busca sempre a versão publicada e, sem internet, abre com a última cópia guardada. Supabase, mapa e fontes não passam por ele. Ao mudar a lista de arquivos guardados, troque `VERSAO` no `sw.js`.
+- Limite: o aviso por GPS só funciona com o app aberto (no app Expo ele funcionará em segundo plano).
+
+## Regras e testes
+
+- As regras de negócio ficam em `prototipo/regras.js`, sem tela, rede nem armazenamento: média pelo tanque cheio, avaliação no abastecimento seguinte, nota em meias estrelas, CPF, WhatsApp, senha, cor do marcador, estatística do posto, distância e a montagem da rede a partir do banco. No navegador elas ficam em `window.Regras`; no Node (testes e, depois, o app Expo), vêm por `require`.
+- Testes: `npm install` e depois `npm test` (Vitest, em `testes/`). O GitHub Actions roda os testes em todo PR e push na `main` (`.github/workflows/ci.yml`).
+
+## Desempenho
+
+- A nota, os preços e o rendimento de cada posto vêm de um índice das avaliações agrupadas por posto, refeito só quando os dados mudam. Por isso `S.pub`, `S.mine` e `S.susp` nunca são alterados no lugar: cada mudança troca o objeto inteiro.
+- Cada aba é desenhada só quando está à vista; as outras são desenhadas ao serem abertas.
+- A busca de postos espera 200 ms depois da última tecla. O aviso por GPS olha só os postos a até 2 km (lista refeita a cada 500 m andados).
+
 ## Próxima etapa: app de celular
 
 - React Native (Expo), para Android e iPhone.
@@ -69,7 +89,11 @@ O posto é avaliado (estrelas + comentário) sempre no abastecimento **seguinte*
 
 Com `SUPABASE_URL` e `SUPABASE_KEY` preenchidos no topo do script de `prototipo/index.html`, o app passa a usar o banco online; vazios, roda no modo local.
 
-- Script do banco: `supabase/schema.sql` (tabelas `profiles`, `postos`, `garagem`, `abastecimentos`, `avaliacoes`, `eventos` e a visão `uso_por_dia`, com regras de acesso RLS).
+- Script do banco: `supabase/schema.sql` (tabelas `profiles`, `postos`, `garagem`, `abastecimentos`, `avaliacoes`, `suspeitas`, `eventos`, `apagados`, `uso_diario` e a visão `uso_por_dia`, com regras de acesso RLS). Pode ser rodado de novo a qualquer momento; depois de atualizar o protótipo, rode-o de novo no SQL Editor.
+- Sincronização: a rede (postos, avaliações, suspeitas) vem inteira no login e, depois, a cada minuto, só o que mudou (`atualizado_em`, preenchido por gatilho, e a tabela `apagados`, que guarda só o id do que foi apagado). A tela só é redesenhada quando algo mudou. Num banco sem essa parte do script, o app continua baixando tudo, como antes.
+- Todas as leituras de tabela vêm em páginas de 1.000 linhas (o limite por pedido do Supabase); antes, o que passasse disso sumia sem aviso.
+- O cartão "Uso do app" usa a função `uso_resumo(dias)`, calculada no banco (só para administradores).
+- Manutenção diária (`manutencao()`, agendada pelo pg_cron às 3h15): eventos com mais de 90 dias viram uma linha por dia e tipo em `uso_diario` e saem de `eventos`; registros de `apagados` com mais de 30 dias saem também. Sem a extensão pg_cron, rode `select public.manutencao();` de vez em quando.
 - Login pelo Supabase Auth (e-mail + senha; o CPF é convertido no e-mail da conta pela função `email_do_login`). Depois da senha continua o código do WhatsApp (ainda simulado).
 - "Esqueci minha senha" no modo online manda um **link por e-mail** (o código do WhatsApp para recuperar senha precisa de servidor próprio).
 - Eventos de uso gravados em `eventos`: abriu o app, telas, cadastro, login/saída, posto cadastrado, abastecimento, mapa, GPS, busca de endereço.

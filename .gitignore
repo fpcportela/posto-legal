@@ -1,5 +1,10 @@
 .DS_Store
 prototipo/index.backup-*.html
+/node_modules/
+
+# Cópias de conflito do Google Drive ("README 2.md", "main 2"): nunca versionar
+* 2
+* 2.*
 
 # Claude Code: worktrees dos subagentes (isolation: worktree) — rb-ai-team#38
 .claude/worktrees/

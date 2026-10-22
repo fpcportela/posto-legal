@@ -1,9 +1,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>POSTO LEGAL</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e0b07">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Posto Legal">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: painel escuro com destaques em âmbar e laranja. Cabeçalho fixo no topo com a marca e as abas em pílulas,
    coluna única de até 600px, títulos grandes em Space Grotesk e rótulos em fonte mono espaçada. */
@@ -14,7 +21,7 @@
   --good:#4ade80; --good-soft:rgba(74,222,128,.1); --bad:#f87171; --bad-soft:rgba(248,113,113,.1); --mid:#fbbf24; --mid-soft:rgba(251,191,36,.1);
   --f-display:"Space Grotesk","Segoe UI",system-ui,sans-serif;
   --f-body:"Inter","Segoe UI",system-ui,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --f-mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace; /* mono do sistema: uma fonte a menos para baixar */
   --r:22px; --r-sm:14px;
   color-scheme:dark;
 }
@@ -229,8 +236,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @media (min-width:600px){.modal-bg{align-items:center}}
 .modal-bg .card{width:100%;max-width:520px;max-height:85vh;overflow-y:auto}
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
 <header class="top"><div class="in">
     <div class="logo"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 8h5M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg></span><span class="wm"><b>POSTO <span>LEGAL</span></b><small>FUEL QUALITY TRACKER</small></span></div>
@@ -544,6 +549,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 <div class="toast" id="toast" hidden></div>
 
+<script src="regras.js"></script>
 <script>
 // Banco online (Supabase). Com os dois vazios, o app roda no modo local (dados só neste aparelho).
 const SUPABASE_URL="",SUPABASE_KEY="";
@@ -608,13 +614,14 @@ async function carregarAnpUF(ufs){
   ANP.ver++;clearTimeout(ANP.t);ANP.t=setTimeout(renderAll,30);
 }
 const ufDoId=id=>(/^anp-([A-Z]{2})-/.exec(id||"")||[])[1];
+// UFs dos postos da ANP já usados (meus abastecimentos e as avaliações da rede): os arquivos delas vêm sempre.
+const ufsUsadas=()=>memo("ufs",[S.pub,S.mine],()=>{const u=new Set();for(const a of S.mine){const x=ufDoId(a.postoId);if(x)u.add(x)}for(const l of Object.values(S.pub))for(const i of l){const x=ufDoId(i.postoId);if(x)u.add(x)}return u});
 async function anpPerto(){
   const idx=await anpIndice();if(!idx)return;const ufs=new Set(),m=.3;
   const noPonto=([la,ln])=>Object.entries(idx.ufs).forEach(([u,i])=>{if(i.bbox&&la>=i.bbox[0]-m&&la<=i.bbox[2]+m&&ln>=i.bbox[1]-m&&ln<=i.bbox[3]+m)ufs.add(u)});
   if(M.me)noPonto(M.me);
   if(map&&!$("#v-mapa").hidden&&map.getZoom()>=9){const b=map.getBounds();Object.entries(idx.ufs).forEach(([u,i])=>{if(i.bbox&&b.intersects(L.latLngBounds([i.bbox[0],i.bbox[1]],[i.bbox[2],i.bbox[3]])))ufs.add(u)})}
-  for(const a of S.mine){const u=ufDoId(a.postoId);if(u)ufs.add(u)}
-  for(const l of Object.values(S.pub))for(const i of l){const u=ufDoId(i.postoId);if(u)ufs.add(u)}
+  for(const u of ufsUsadas())ufs.add(u);
   carregarAnpUF([...ufs]);
 }
 // Rede + ANP num objeto só, refeito só quando algo muda (a ANP pode ter dezenas de milhares de postos).
@@ -624,11 +631,16 @@ function allPostos(){
   const k=[ANP.ver,S.demo,Object.keys(S.postos).length].join("|");
   if(ALL.k!==k||ALL.src!==S.postos){const naRede=new Set(Object.values(S.postos).map(p=>p.cnpj).filter(Boolean)),v={};
     for(const [id,p] of Object.entries(S.anp))if(!naRede.has(p.cnpj))v[id]=p;
-    ALL={k,src:S.postos,v:Object.assign(v,S.postos)}}
-  return S.demo?{...DEMO_POSTOS,...ALL.v}:ALL.v;
+    Object.assign(v,S.postos);
+    ALL={k,src:S.postos,v:S.demo?{...DEMO_POSTOS,...v}:v}}
+  return ALL.v;
 }
+/* Índices da rede, refeitos só quando os dados mudam. S.pub, S.mine e S.susp nunca são alterados no lugar:
+   cada mudança troca o objeto inteiro, e é essa troca que invalida os índices. */
+const IDX={};
+function memo(nome,deps,f){const c=IDX[nome];if(c&&c.deps.every((d,i)=>d===deps[i]))return c.v;const v=f();IDX[nome]={deps,v};return v}
 // postos com alguma informação da rede (avaliação, preço, abastecimento meu, suspeita)
-function postosComDados(){const s=new Set(Object.keys(S.susp||{}));for(const i of allItems())s.add(i.postoId);for(const a of S.mine)s.add(a.postoId);return s}
+function postosComDados(){return memo("comDados",[S.pub,S.mine,S.susp,S.demo],()=>{const s=new Set(Object.keys(S.susp||{}));for(const i of allItems())s.add(i.postoId);for(const a of S.mine)s.add(a.postoId);return s})}
 // O posto da rede guarda o nome cadastrado (na base da ANP, a razão social). Cada usuário pode dar
 // o seu próprio nome a ele (nome fantasia), guardado só na garagem dele: S.gar.apelidos[postoId].
 const apelido=id=>((S.gar&&S.gar.apelidos)||{})[id]||"";
@@ -640,24 +652,25 @@ const ICO_ATENCAO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 
 const susp=id=>(S.susp&&S.susp[id])||[];
 const suspTag=id=>{const n=susp(id).length;return n?`<span class="susp" role="button" tabindex="0" data-susp="${id}" title="Ver os relatos de suspeita de fraude" aria-label="${n} ${n>1?"suspeitas":"suspeita"} de fraude: ver relatos">${ICO_ATENCAO}${n}</span>`:""};
 const suspBox=id=>{const n=susp(id).length;return n?`<div class="susp-box"><strong>${ICO_ATENCAO}${n} ${n>1?"suspeitas de fraude relatadas":"suspeita de fraude relatada"}</strong><p class="note">Relatos de motoristas, não verificados.</p><button class="btn ghost small" type="button" data-susp="${id}">Ver relatos</button></div>`:""};
-function allItems(){const out=[];const src=S.demo?{...S.pub,...DEMO_PUB}:S.pub;for(const [uid,items] of Object.entries(src))for(const it of items||[])out.push({...it,uid});return out}
+function allItems(){return memo("itens",[S.pub,S.demo],()=>{const out=[],src=S.demo?{...S.pub,...DEMO_PUB}:S.pub;for(const [uid,items] of Object.entries(src))for(const it of items||[])out.push({...it,uid});return out})}
 
 /* ---------- agregação da rede ---------- */
+// As avaliações são agrupadas por posto uma vez por versão dos dados; a estatística de cada posto é
+// calculada na primeira consulta e guardada até a próxima mudança.
 function stats(pid){
-  const its=allItems().filter(i=>i.postoId===pid);
-  const rated=its.filter(i=>i.estrelas);
-  const media=rated.length?rated.reduce((a,i)=>a+i.estrelas,0)/rated.length:null;
-  const kml=its.filter(i=>i.kmL);
-  const precos={};its.slice().sort((a,b)=>a.data.localeCompare(b.data)).forEach(i=>{if(i.preco&&i.comb)precos[i.comb]={preco:i.preco,data:i.data}});
-  return {its,n:rated.length,media,kml,precos};
+  const m=memo("stats",[S.pub,S.demo],()=>({porPosto:Regras.agruparPorPosto(allItems()),st:new Map()}));
+  let st=m.st.get(pid);if(!st){st=Regras.statsDoPosto(m.porPosto.get(pid)||[]);m.st.set(pid,st)}
+  return st;
 }
 function reputacao(st){
-  const c=S.gar.config||CFG_PADRAO;
-  if(!st.n)return {cls:"none",tit:"Posto ainda sem avaliações",txt:"Os motoristas avaliam o posto no abastecimento seguinte, depois de rodar com o combustível dele."};
-  if(st.n<c.min)return {cls:"mid",tit:`Nota ${num(st.media)} com poucas avaliações`,txt:`Só ${st.n} avaliação(ões) até agora.`};
-  if(st.media<=c.baixo)return {cls:"bad",tit:`Atenção: posto mal avaliado (${num(st.media)})`,txt:`${st.n} motoristas avaliaram. Veja as reclamações antes de abastecer.`};
-  if(st.media>=c.alto)return {cls:"good",tit:`Posto muito bem avaliado (${num(st.media)})`,txt:`${st.n} motoristas avaliaram.`};
-  return {cls:"mid",tit:`Posto com nota regular (${num(st.media)})`,txt:`${st.n} motoristas avaliaram.`};
+  const {cls,motivo}=Regras.reputacao(st,S.gar.config||CFG_PADRAO),m=num(st.media),n=st.n;
+  switch(motivo){
+    case "sem-nota":return {cls,tit:"Posto ainda sem avaliações",txt:"Os motoristas avaliam o posto no abastecimento seguinte, depois de rodar com o combustível dele."};
+    case "poucas":return {cls,tit:`Nota ${m} com poucas avaliações`,txt:`Só ${n} avaliação(ões) até agora.`};
+    case "ruim":return {cls,tit:`Atenção: posto mal avaliado (${m})`,txt:`${n} motoristas avaliaram. Veja as reclamações antes de abastecer.`};
+    case "boa":return {cls,tit:`Posto muito bem avaliado (${m})`,txt:`${n} motoristas avaliaram.`};
+    default:return {cls,tit:`Posto com nota regular (${m})`,txt:`${n} motoristas avaliaram.`};
+  }
 }
 function resumoSimples(its){
   const c=its.filter(i=>i.obs).sort((a,b)=>b.data.localeCompare(a.data));
@@ -732,21 +745,47 @@ const abDe=r=>{const a={id:r.id,veiculoId:r.veiculo_id,postoId:r.posto_id,postoN
 const abLinha=a=>({id:a.id,user_id:S.uid,veiculo_id:a.veiculoId,veiculo_modelo:((S.gar.veiculos||[]).find(v=>v.id===a.veiculoId)||{}).modelo||null,posto_id:a.postoId,posto_nome:a.postoNome,km:a.km,comb:a.comb,preco:a.preco,total:a.total,litros:a.litros,cheio:!!a.cheio,
   media:a.media??null,estrelas:a.estrelas||null,obs:a.obs||null,km_l:a.kmL??null,avaliado_em:a.avaliadoEm||null,data:a.data});
 async function carregarPerfil(uid){const {data,error}=await sb.from("profiles").select("*").eq("id",uid).maybeSingle();if(error)throw error;return data?perfilDe(data):null}
+/* A rede (postos, avaliações, suspeitas) vem inteira no login e, depois, a cada minuto, só o que mudou desde a
+   última busca (atualizado_em e a tabela apagados, no schema.sql). REDE guarda as linhas do banco por id;
+   S.postos, S.pub e S.susp são remontados a partir delas só quando algo muda. */
+const REDE={postos:new Map(),aval:new Map(),susp:new Map(),desde:null,sincEm:0,incremental:true,escritas:0,ocupado:false};
+function zerarRede(){REDE.postos=new Map();REDE.aval=new Map();REDE.susp=new Map();REDE.desde=null;REDE.sincEm=0}
+function aplicarRede(m={postos:1,aval:1,susp:1}){const r=Regras.montarRede(REDE);if(m.postos)S.postos=r.postos;if(m.aval){S.pub=r.pub;S.pubNome=r.pubNome}if(m.susp)S.susp=r.susp}
+// O Supabase devolve no máximo 1.000 linhas por pedido (max-rows do PostgREST): sem paginar, o que passasse disso sumia sem aviso.
+async function todasLinhas(montar){const P=1000,out=[];for(let de=0;;de+=P){const {data,error}=await montar().range(de,de+P-1);if(error)throw error;out.push(...data);if(data.length<P)return out}}
 async function carregarRede(){
-  const [p,a]=await Promise.all([sb.from("postos").select("*"),sb.from("avaliacoes").select("*").order("data").limit(10000)]);
-  if(p.error)throw p.error;if(a.error)throw a.error;
-  S.postos={};for(const r of p.data)S.postos[r.id]={nome:r.nome,cnpj:r.cnpj||undefined,bandeira:r.bandeira,cidade:r.cidade,uf:r.uf,endereco:r.endereco,lat:r.lat,lng:r.lng,criadoPor:r.criado_por,criadoEm:r.criado_em};
-  // suspeitas: se a tabela ainda não existe (schema.sql não rodado de novo), o app segue sem elas
-  const sp=await sb.from("suspeitas").select("*").order("criado_em").limit(10000);S.susp={};
-  if(sp.error)console.warn("suspeitas:",sp.error.message);
-  else for(const r of sp.data)(S.susp[r.posto_id]=S.susp[r.posto_id]||[]).push({id:r.id,uid:r.user_id,nome:r.nome,abastId:r.abastecimento_id,categoria:r.categoria,motivo:r.motivo,data:r.criado_em});
-  S.pub={};S.pubNome={};
-  for(const r of a.data){(S.pub[r.user_id]=S.pub[r.user_id]||[]).push({id:r.id,postoId:r.posto_id,comb:r.comb,preco:nOuNulo(r.preco),modelo:r.modelo,kmL:nOuNulo(r.km_l),estrelas:r.estrelas!=null?Number(r.estrelas):undefined,obs:r.obs||undefined,avaliadoEm:r.avaliado_em||undefined,data:r.data});if(r.nome)S.pubNome[r.user_id]=r.nome}
+  const tudo=t=>todasLinhas(()=>sb.from(t).select("*").order("id"));
+  for(let vez=0;;vez++){
+    const escritas=REDE.escritas;
+    // suspeitas: se a tabela ainda não existe (schema.sql não rodado de novo), o app segue sem elas
+    const [p,a,s]=await Promise.all([tudo("postos"),tudo("avaliacoes"),tudo("suspeitas").catch(e=>{console.warn("suspeitas:",e.message);return []})]);
+    // uma gravação deste aparelho no meio da busca pode ter ficado de fora: busca de novo
+    if(escritas!==REDE.escritas&&vez<2)continue;
+    REDE.postos=new Map(p.map(r=>[r.id,r]));REDE.aval=new Map(a.map(r=>[r.id,r]));REDE.susp=new Map(s.map(r=>[r.id,r]));
+    REDE.desde=Regras.ultimaMudanca(p.concat(a,s),[],null);REDE.sincEm=Date.now();
+    aplicarRede();return;
+  }
+}
+// banco sem as colunas e a tabela da sincronização (schema.sql antigo): volta a baixar a rede inteira
+const SEM_SYNC=new Set(["42703","42P01","PGRST200","PGRST204","PGRST205"]);
+async function sincronizarRede(){
+  if(!REDE.incremental||!REDE.desde||Date.now()-REDE.sincEm>7*864e5){await carregarRede();return true}
+  // a janela repete 2 minutos: uma gravação que terminou depois da última busca, mas com horário anterior, não se perde
+  const desde=new Date(Date.parse(REDE.desde)-120e3).toISOString(),escritas=REDE.escritas;
+  const novas=t=>todasLinhas(()=>sb.from(t).select("*").gt("atualizado_em",desde).order("id"));
+  let p,a,s,ap;
+  try{[p,a,s,ap]=await Promise.all([novas("postos"),novas("avaliacoes"),novas("suspeitas"),todasLinhas(()=>sb.from("apagados").select("tabela,registro,apagado_em").gt("apagado_em",desde).order("id"))])}
+  catch(e){if(!SEM_SYNC.has(e.code))throw e;REDE.incremental=false;await carregarRede();return true}
+  if(escritas!==REDE.escritas)return false; // gravação deste aparelho no meio da busca: o próximo ciclo traz tudo de novo
+  const m={postos:Regras.mesclarLinhas(REDE.postos,p,ap,"postos"),aval:Regras.mesclarLinhas(REDE.aval,a,ap,"avaliacoes"),susp:Regras.mesclarLinhas(REDE.susp,s,ap,"suspeitas")};
+  REDE.desde=Regras.ultimaMudanca(p.concat(a,s),ap,REDE.desde);REDE.sincEm=Date.now();
+  if(!m.postos&&!m.aval&&!m.susp)return false;
+  aplicarRede(m);return true;
 }
 async function carregarMeus(){
-  const [g,ab]=await Promise.all([sb.from("garagem").select("dados").eq("user_id",S.uid).maybeSingle(),sb.from("abastecimentos").select("*").eq("user_id",S.uid)]);
-  if(g.error)throw g.error;if(ab.error)throw ab.error;
-  const d=g.data&&g.data.dados;S.gar=d&&d.veiculos?{...garPadrao(),...d}:garPadrao();S.mine=ab.data.map(abDe);
+  const [g,ab]=await Promise.all([sb.from("garagem").select("dados").eq("user_id",S.uid).maybeSingle(),todasLinhas(()=>sb.from("abastecimentos").select("*").eq("user_id",S.uid).order("id"))]);
+  if(g.error)throw g.error;
+  const d=g.data&&g.data.dados;S.gar=d&&d.veiculos?{...garPadrao(),...d}:garPadrao();S.mine=ab.map(abDe);
 }
 async function entrarSupa(uid){
   S.uid=uid;const f=lsGet(LS_2FA,null);
@@ -756,7 +795,12 @@ async function entrarSupa(uid){
   S.conta=c;S.isOwner=!!(c&&c.isAdmin);
   if(contaConfirmada()){await Promise.all([carregarRede(),carregarMeus()]);if(S.isOwner)carregarAdmin()}
 }
-function atualizarRede(){if(sb&&contaConfirmada())carregarRede().then(renderAll).catch(()=>{})}
+// a cada minuto e ao voltar para o app; só redesenha se algo mudou
+function atualizarRede(){
+  if(!sb||!contaConfirmada()||REDE.ocupado)return;
+  REDE.ocupado=true;
+  sincronizarRede().then(mudou=>{if(mudou)renderAll()}).catch(()=>{}).finally(()=>{REDE.ocupado=false});
+}
 async function initSupa(){
   S.mode="supa";S.contaOk=false;S.uid=null;S.conta=null;gate();$("#status").textContent="Conectando…";
   await carregarScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js");
@@ -772,8 +816,8 @@ async function initSupa(){
 /* painel do dono: usuários e uso */
 async function carregarAdmin(){
   if(!sb||!S.isOwner)return;
-  const {data}=await sb.from("profiles").select("*").order("criado_em",{ascending:false});
-  S.usuarios=(data||[]).map(r=>({id:r.id,...perfilDe(r)}));renderAdmin();renderUso(true);
+  let data=[];try{data=await todasLinhas(()=>sb.from("profiles").select("*").order("criado_em",{ascending:false}).order("id"))}catch(e){console.warn("usuários:",e.message)}
+  S.usuarios=data.map(r=>({id:r.id,...perfilDe(r)}));renderAdmin();renderUso(true);
 }
 const ROT_EV={app_aberto:"Abriu o app",tela:"Abriu uma tela",cadastro_enviado:"Enviou cadastro",conta_confirmada:"Confirmou a conta",login:"Entrou",logout:"Saiu",
   posto_cadastrado:"Cadastrou posto",abastecimento_salvo:"Registrou abastecimento",mapa_posto_aberto:"Abriu posto no mapa",gps_aviso:"Ligou/desligou GPS",
@@ -785,11 +829,15 @@ async function renderUso(forcar){
   const cnt=async(t,f)=>{let q=sb.from(t).select("*",{count:"exact",head:true});if(f)q=f(q);const {count}=await q;return count??0};
   const desde=new Date(Date.now()-7*864e5).toISOString();
   try{
-    const [usu,conf,abs,avs,pos,ev7,ult]=await Promise.all([cnt("profiles"),cnt("profiles",q=>q.eq("status","confirmado")),cnt("abastecimentos"),cnt("avaliacoes",q=>q.not("estrelas","is",null)),cnt("postos"),
-      sb.from("eventos").select("tipo,user_id,sessao").gte("criado_em",desde).limit(10000),
+    const [usu,conf,abs,avs,pos,res,ult]=await Promise.all([cnt("profiles"),cnt("profiles",q=>q.eq("status","confirmado")),cnt("abastecimentos"),cnt("avaliacoes",q=>q.not("estrelas","is",null)),cnt("postos"),
+      sb.rpc("uso_resumo",{dias:7}),
       sb.from("eventos").select("tipo,user_id,dados,criado_em").order("criado_em",{ascending:false}).limit(15)]);
-    const ev=ev7.data||[],porTipo={};ev.forEach(e=>porTipo[e.tipo]=(porTipo[e.tipo]||0)+1);
-    const ativos=new Set(ev.filter(e=>e.user_id).map(e=>e.user_id)).size,nomes=Object.fromEntries(S.usuarios.map(u=>[u.id,u.nome]));
+    let porTipo={},ativos=0;
+    if(!res.error&&res.data){porTipo=res.data.por_tipo||{};ativos=res.data.ativos||0}
+    else{ // banco sem a função uso_resumo (schema.sql antigo): conta aqui, sobre no máximo 1.000 eventos
+      const ev=(await sb.from("eventos").select("tipo,user_id").gte("criado_em",desde).limit(1000)).data||[];
+      ev.forEach(e=>porTipo[e.tipo]=(porTipo[e.tipo]||0)+1);ativos=new Set(ev.filter(e=>e.user_id).map(e=>e.user_id)).size}
+    const nomes=Object.fromEntries(S.usuarios.map(u=>[u.id,u.nome]));
     const m=(k,v)=>`<div class="metric"><div class="k">${k}</div><div class="v">${v}</div></div>`;
     $("#usoBody").innerHTML=`<div class="kpis">${m("Usuários",usu)}${m("Confirmados",conf)}${m("Ativos 7 dias",ativos)}${m("Abastecimentos",abs)}${m("Avaliações",avs)}${m("Postos",pos)}</div>
       <h3>Últimos 7 dias</h3>
@@ -800,7 +848,7 @@ async function renderUso(forcar){
   }catch(e){$("#usoBody").innerHTML='<p class="note">Não foi possível carregar os números agora.</p>'}
 }
 async function addPosto(p){
-  if(sb){const {data,error}=await sb.from("postos").insert({nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat??null,lng:p.lng??null}).select("id").single();if(error)throw error;S.postos[data.id]={...p,criadoPor:S.uid};return data.id}
+  if(sb){const {data,error}=await sb.from("postos").insert({nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat??null,lng:p.lng??null}).select("id").single();if(error)throw error;REDE.escritas++;S.postos[data.id]={...p,criadoPor:S.uid};return data.id}
   if(db){const ref=await db.collection("postos").add(p);S.postos[ref.id]=p;return ref.id}
   const id="p"+Date.now();S.postos[id]=p;lsSave();return id;
 }
@@ -813,23 +861,23 @@ async function materializarAnp(id){
   const p=S.anp[id];
   let {data,error}=await sb.from("postos").select("id").eq("cnpj",p.cnpj).maybeSingle();if(error)throw error;
   if(!data)({data,error}=await sb.from("postos").insert({nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat,lng:p.lng,cnpj:p.cnpj}).select("id").single());
-  if(error)throw error;
+  if(error)throw error;REDE.escritas++;
   S.postos[data.id]={nome:p.nome,bandeira:p.bandeira,cidade:p.cidade,uf:p.uf,endereco:p.endereco,lat:p.lat,lng:p.lng,cnpj:p.cnpj,criadoPor:S.uid};
   const ap=S.gar.apelidos||{};if(ap[id]){S.gar={...S.gar,apelidos:{...ap,[data.id]:ap[id]}};await saveGar()}
   return data.id;
 }
 async function saveSuspeita(s){
   const item={...s,uid:S.uid,nome:primeiroNome()};
-  if(sb){const {data,error}=await sb.from("suspeitas").insert({posto_id:s.postoId,abastecimento_id:s.abastId,categoria:s.categoria,motivo:s.motivo,nome:item.nome}).select("id").single();if(error)throw error;item.id=data.id}
+  if(sb){const {data,error}=await sb.from("suspeitas").insert({posto_id:s.postoId,abastecimento_id:s.abastId,categoria:s.categoria,motivo:s.motivo,nome:item.nome}).select("id").single();if(error)throw error;REDE.escritas++;item.id=data.id}
   else if(db){await db.collection("suspeitas").add(item);return}
-  (S.susp[s.postoId]=S.susp[s.postoId]||[]).push(item);if(!sb)lsSave();
+  S.susp={...S.susp,[s.postoId]:[...susp(s.postoId),item]};if(!sb)lsSave();
 }
 async function saveGar(){if(sb){const {error}=await sb.from("garagem").upsert({user_id:S.uid,dados:S.gar,atualizado_em:new Date().toISOString()});if(error)throw error;return}if(db)await db.doc(`data/users/${S.uid}/garagem`).set(S.gar);else lsSave()}
 async function saveAbast(a){if(sb){const {error}=await sb.from("abastecimentos").upsert(abLinha(a));if(error)throw error;S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);return}if(db)await db.doc(`data/users/${S.uid}/${a.id}`).set(a);else{S.mine=S.mine.filter(x=>x.id!==a.id).concat(a);lsSave()}}
 async function savePub(items,ids){const nome=primeiroNome();
   if(sb){const rows=items.filter(i=>!ids||ids.includes(i.id)).map(i=>({id:i.id,user_id:S.uid,nome,posto_id:i.postoId,comb:i.comb,preco:i.preco??null,modelo:i.modelo||null,km_l:i.kmL??null,estrelas:i.estrelas||null,obs:i.obs||null,avaliado_em:i.avaliadoEm||null,data:i.data}));
-    const {error}=await sb.from("avaliacoes").upsert(rows);if(error)throw error;S.pub[S.uid]=items;S.pubNome[S.uid]=nome;return}
-  if(db)await db.doc("avaliacoes/"+S.uid).set({itens:items,nome});else{S.pub[S.uid]=items;S.pubNome[S.uid]=nome;lsSave()}}
+    const {error}=await sb.from("avaliacoes").upsert(rows);if(error)throw error;REDE.escritas++;S.pub={...S.pub,[S.uid]:items};S.pubNome={...S.pubNome,[S.uid]:nome};return}
+  if(db)await db.doc("avaliacoes/"+S.uid).set({itens:items,nome});else{S.pub={...S.pub,[S.uid]:items};S.pubNome={...S.pubNome,[S.uid]:nome};lsSave()}}
 async function saveConta(c){if(sb){const {error}=await sb.from("profiles").upsert(perfilLinha(c));if(error)throw error;S.conta={...c,isAdmin:(S.conta||{}).isAdmin};lsSet(LS_COD+S.uid,c.codigo?{codigo:c.codigo,tentativas:c.tentativas||0}:null);return}if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
 const primeiroNome=()=>((S.conta&&S.conta.nome)||"").trim().split(/\s+/)[0]||"";
 
@@ -857,7 +905,7 @@ async function init(){
 async function loadNames(){
   if(!user||!user.profiles)return;
   const ids=Object.keys(S.pub);if(!ids.length)return;
-  try{const ps=await user.profiles(ids.slice(0,64));for(const id of ids)S.names[id]=(ps[id]&&ps[id].name)||"";if(!$("#detail").hidden&&S.detail)renderDetail(S.detail)}catch(e){}
+  try{const ps=await user.profiles(ids.slice(0,64));for(const id of ids)S.names[id]=(ps[id]&&ps[id].name)||"";if(!$("#detail").hidden&&S.detail)renderDetail(S.detail,false)}catch(e){}
 }
 
 /* ---------- ABASTECER ---------- */
@@ -907,7 +955,7 @@ async function addVeiculo(modelo,placa,comb){
   S.gar={...S.gar,veiculos:[...(S.gar.veiculos||[]),nv]};
   await saveGar();return nv;
 }
-function lastAbast(vid){return S.mine.filter(a=>a.veiculoId===vid).sort((a,b)=>b.km-a.km)[0]}
+function lastAbast(vid){return Regras.ultimoAbastecimento(S.mine,vid)}
 function prefillVeic(){
   const vid=$("#veiculo").value,v=(S.gar.veiculos||[]).find(x=>x.id===vid);
   if(v&&v.comb)$("#comb").value=v.comb;
@@ -917,7 +965,7 @@ function calc(){
   const vid=$("#veiculo").value,km=parseFloat($("#km").value),preco=parseBR($("#preco").value),total=parseBR($("#total").value),litros=parseBR($("#litros").value),cheio=$("#cheio").checked;
   const last=lastAbast(vid);
   const rod=last&&km>last.km?km-last.km:null;
-  const media=rod&&litros&&cheio&&last.cheio?rod/litros:null;
+  const media=Regras.mediaKmL({km,litros,cheio},last);
   return {vid,km,preco,total,litros,cheio,last,rod,media};
 }
 function updateRateCard(c){
@@ -960,7 +1008,7 @@ function navHtml(id,p){
   return `<div class="navgo"><h3>Ir até o posto</h3><div class="row"><a class="btn sec small" href="${wz}" target="_blank" rel="noopener" data-nav="waze"><svg viewBox="0 0 24 24"><path d="M5 17.5C3.5 16.4 3 14.6 3 13a9 9 0 0 1 18 0c0 3.9-3 7-7 7h-3"/><circle cx="8" cy="20" r="1.6"/><circle cx="16.5" cy="20" r="1.6"/><path d="M9.5 11h.01M14.5 11h.01M9.5 14.5c1.4 1 3.6 1 5 0"/></svg>Waze</a><a class="btn sec small" href="${gm}" target="_blank" rel="noopener" data-nav="maps"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Google Maps</a></div></div>`;
 }
 document.addEventListener("click",e=>{const a=e.target.closest("a[data-nav]");if(a)track("navegar",{app:a.dataset.nav})});
-function renderDetail(id){
+function renderDetail(id,rolar=true){
   S.detail=id;const p=allPostos()[id];if(!p){$("#detail").hidden=true;return}
   const st=stats(id),r=reputacao(st),res=resumoIA[id]||resumoSimples(st.its);
   const kml=st.kml.slice().sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6);
@@ -977,7 +1025,7 @@ function renderDetail(id){
     <h3>Avaliações</h3>${reviews.length?reviews.map(i=>`<div class="review"><div class="row between">${starsHtml(i.estrelas)}<span class="meta">${esc(i.uid==="demo-u"?"Motorista exemplo":i.uid===S.uid?"Você":(S.pubNome[i.uid]||S.names[i.uid]||"Motorista"))} · ${fdata(i.avaliadoEm||i.data)}</span></div>${i.obs?`<div>${esc(i.obs)}</div>`:""}<div class="meta">${esc(i.comb||"")}${i.preco?" · "+brl(i.preco)+"/L":""}</div></div>`).join(""):'<p class="note">Sem avaliações ainda.</p>'}`;
   $("#detClose").onclick=()=>{$("#detail").hidden=true;S.detail=null};
   const b=$("#detIA");if(b)b.onclick=()=>gerarResumo(id,$("#detSum"),b);
-  $("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
+  if(rolar)$("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
 }
 
 /* ---------- MAPA ---------- */
@@ -992,7 +1040,7 @@ function coords(id,p){
   if(p.demo&&DEMO_OFF[id]){const b=M.base||CENTRO_PADRAO;return [b[0]+DEMO_OFF[id][0],b[1]+DEMO_OFF[id][1]]}
   return null;
 }
-function distM(a,b){const r=x=>x*Math.PI/180,h=Math.sin(r(b[0]-a[0])/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(r(b[1]-a[1])/2)**2;return 2*6371e3*Math.asin(Math.sqrt(h))}
+const distM=Regras.distM;
 const fmtDist=d=>d<1000?Math.round(d)+" m":num(d/1000)+" km";
 const veicMapa=()=>(S.gar.veiculos||[]).find(x=>x.id===M.vid);
 const combMapa=()=>M.comb||(veicMapa()||{}).comb||COMBS[0];
@@ -1007,35 +1055,62 @@ function fillMapSel(){
   sv.value=M.vid;sc.value=combMapa();
   $("#mGps").checked=!!(S.gar.config||{}).gps;
 }
+// Fundo do mapa. O servidor do OpenStreetMap ("osm") serve para testes: a política de uso dele não aceita o
+// tráfego de um app. Para o grupo de teste, crie uma conta grátis na Stadia Maps, cadastre lá o domínio do site
+// (fpcportela.github.io) e troque para "stadia"; o fundo escuro dela dispensa o filtro de cor.
+const MAPA_FUNDO="osm";
+const FUNDOS={
+  osm:{url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",o:{maxZoom:19,className:"tiles-escuro",attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}},
+  stadia:{url:"https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",o:{maxZoom:20,attribution:'© <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}}};
+// O Leaflet só é baixado quando o mapa é aberto, ou com o navegador ocioso depois da abertura do app.
+let leafletP=null;
+function carregarLeaflet(){
+  if(window.L)return Promise.resolve();
+  if(!leafletP){
+    const css=new Promise((ok,falha)=>{const l=document.createElement("link");l.rel="stylesheet";l.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";l.onload=ok;l.onerror=()=>falha(new Error("css"));document.head.appendChild(l)});
+    leafletP=Promise.all([css,carregarScript("https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js")]).catch(e=>{leafletP=null;throw e});
+  }
+  return leafletP;
+}
 function initMap(){
-  const t=document.documentElement.dataset.theme,dark=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);
   map=L.map("map").setView(M.me||M.base||CENTRO_PADRAO,14);
-  // fundo: tiles do OpenStreetMap (o CARTO passou a exigir chave), escurecidos por filtro CSS
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"tiles-escuro",attribution:"© OpenStreetMap"}).addTo(map);
+  const f=FUNDOS[MAPA_FUNDO]||FUNDOS.osm;L.tileLayer(f.url,f.o).addTo(map);
   mkLayer=L.layerGroup().addTo(map);M.canvas=L.canvas({padding:.3});
-  map.on("moveend",()=>{anpPerto();renderMapa()});
+  // o zoom pela roda do mouse dispara vários moveend seguidos: desenha uma vez, quando o mapa para
+  map.on("moveend",()=>{clearTimeout(M.mt);M.mt=setTimeout(()=>{anpPerto();renderMapa()},120)});
   map.on("click",e=>abrirPontoVazio(e.latlng));
   if(M.me)desenharEu();
 }
+// Marcadores desenhados, por id do posto: {mk, sig}. Cada desenho só cria o marcador que mudou (sig diferente)
+// ou que entrou na área visível, e só remove o que saiu dela.
+const MK=new Map();
 function renderMapa(){
   fillMapSel();
-  if(!window.L){$("#mapMsg").textContent="Não foi possível carregar o mapa. Verifique a conexão com a internet.";return}
   if($("#v-mapa").hidden&&!map)return;
+  if(!window.L){
+    $("#mapMsg").textContent="Carregando o mapa…";
+    carregarLeaflet().then(renderMapa,()=>{$("#mapMsg").textContent="Não foi possível carregar o mapa. Verifique a conexão com a internet."});
+    return}
   if(!map)initMap();
   const P=allPostos(),comb=combMapa(),c=S.gar.config||CFG_PADRAO,dados=postosComDados(),zoom=map.getZoom(),vis=map.getBounds().pad(.2);let semLoc=0,n=0,leves=0,anpFora=0;
-  mkLayer.clearLayers();
+  const vivos=new Set(),desenhar=(id,sig,criar)=>{vivos.add(id);const o=MK.get(id);if(o&&o.sig===sig)return;if(o)mkLayer.removeLayer(o.mk);MK.set(id,{sig,mk:criar().addTo(mkLayer)})};
   for(const [id,p] of Object.entries(P)){
     // posto da ANP ainda sem nenhuma informação da rede: bolinha leve (canvas), só na área visível
     if(p.anp&&!dados.has(id)&&M.alvo!==id){
       if(p.lat==null||M.soComb)continue;
       if(zoom<12||!vis.contains([p.lat,p.lng])){anpFora++;continue}
-      L.circleMarker([p.lat,p.lng],{renderer:M.canvas,radius:6,color:"#1a1003",weight:1.5,fillColor:"#b9a17a",fillOpacity:.95}).bindTooltip(()=>esc(nomeP(id,p))).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{anp:true});abrirPosto(id)}).addTo(mkLayer);leves++;continue}
+      leves++;
+      desenhar(id,"anp",()=>L.circleMarker([p.lat,p.lng],{renderer:M.canvas,radius:6,color:"#1a1003",weight:1.5,fillColor:"#b9a17a",fillOpacity:.95}).bindTooltip(()=>esc(nomeP(id,p))).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{anp:true});abrirPosto(id)}));
+      continue}
     const k=coords(id,p);if(!k){if(!p.anp)semLoc++;continue}
-    const {st,r,pr}=infoPosto(id);
+    const st=stats(id),pr=st.precos[comb];
     if(M.soComb&&!pr)continue;n++;
-    const html=`<div class="pin pin-${r.cls}${M.alvo===id?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`;
-    L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:nomeP(id,p),zIndexOffset:M.alvo===id?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}).addTo(mkLayer);
+    // fora da área visível (com folga) o marcador não é desenhado: ele volta quando o mapa chegar até ele
+    const sel=M.alvo===id;if(!sel&&!vis.contains(k))continue;
+    const html=`<div class="pin pin-${Regras.reputacao(st,c).cls}${sel?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`,titulo=nomeP(id,p);
+    desenhar(id,html+"|"+titulo+"|"+k,()=>L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:titulo,zIndexOffset:sel?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}));
   }
+  for(const [id,o] of MK)if(!vivos.has(id)){mkLayer.removeLayer(o.mk);MK.delete(id)}
   $("#mLegend").innerHTML=`<span><i style="--c:var(--good)"></i>Nota a partir de ${num(c.alto)}</span><span><i style="--c:var(--mid)"></i>Regular ou poucas avaliações</span><span><i style="--c:var(--bad)"></i>Nota até ${num(c.baixo)}</span><span><i style="--c:var(--muted)"></i>Sem nota</span><span><i style="--c:#b9a17a"></i>Cadastro da ANP, sem avaliação</span>`;
   $("#mapMsg").textContent=`${n} posto(s) avaliado(s) no mapa, com preço de ${comb}.`+(leves?` ${leves} do cadastro da ANP ainda sem avaliação.`:"")+(anpFora&&zoom<12?" Aproxime o mapa para ver todos os postos do cadastro da ANP.":"")+(semLoc?` ${semLoc} posto(s) sem localização não aparecem.`:"")+" Toque num ponto vazio do mapa para cadastrar um posto ali.";
   const real=Object.values(S.postos).some(p=>p.lat!=null)||Object.keys(S.anp).length>0;
@@ -1106,10 +1181,21 @@ function onPos(pos){
   if(primeira&&S.demo)renderMapa();
   checarChegada();
 }
+// A checagem roda a cada 5 s e só olha os postos a até 2 km. A lista é refeita quando você anda 500 m
+// ou quando os postos carregados mudam (allPostos troca de objeto).
+const PERTO={P:null,em:null,ids:[]};
+function postosPerto(){
+  const P=allPostos();
+  if(PERTO.P!==P||!PERTO.em||distM(PERTO.em,M.me)>500){
+    PERTO.P=P;PERTO.em=M.me;PERTO.ids=[];
+    for(const [id,p] of Object.entries(P)){const k=coords(id,p);if(k&&distM(M.me,k)<=2000)PERTO.ids.push(id)}
+  }
+  return PERTO.ids;
+}
 function checarChegada(){
   if(!(S.gar.config||{}).gps||!contaConfirmada()||!M.me)return;
-  let best=null;
-  for(const [id,p] of Object.entries(allPostos())){const k=coords(id,p);if(!k)continue;const d=distM(M.me,k);if(d<=RAIO_M&&(!best||d<best.d))best={id,d}}
+  const P=allPostos();let best=null;
+  for(const id of postosPerto()){const k=coords(id,P[id]);if(!k)continue;const d=distM(M.me,k);if(d<=RAIO_M&&(!best||d<best.d))best={id,d}}
   if(!best||(M.vel!=null&&M.vel>3)){M.perto=null;return}
   if(M.perto!==best.id){M.perto=best.id;M.desde=Date.now();return}
   if(Date.now()-M.desde>=PARADO_MS&&!(M.soneca[best.id]>Date.now())&&S.sel!==best.id)perguntar(best.id);
@@ -1166,10 +1252,27 @@ function renderGaragem(){renderConta();renderAdmin();
   if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=c.baixo;$("#c-alto").value=c.alto;$("#c-min").value=c.min}
 }
 
-function renderAll(){renderPostoList();fillVeicSelect();renderRede();renderMapa();if(M.alvo&&!$("#sheet").hidden&&allPostos()[M.alvo])abrirPosto(M.alvo);renderHist();renderGaragem();if((S.gar.config||{}).gps&&M.watch==null&&!M.gpsErro)startGps(false);if(S.sel)renderAlert();if(S.detail&&!$("#detail").hidden)renderDetail(S.detail);updateCalc();renderPainel();anpPerto()}
+/* Desenho por aba: renderAll marca as abas pesadas como desatualizadas e desenha só a que está à vista; as
+   outras são desenhadas quando forem abertas (show). Seletores e formulários que outras telas usam (veículo,
+   combustível do mapa, garagem, cálculo do abastecimento) são atualizados sempre, porque são leves. */
+const DESENHO={
+  painel:renderPainel,
+  abastecer:()=>{renderPostoList();if(S.sel)renderAlert()},
+  rede:()=>{renderRede();if(S.detail&&!$("#detail").hidden)renderDetail(S.detail,false)},
+  mapa:()=>{if(M.alvo&&!$("#sheet").hidden&&allPostos()[M.alvo])abrirPosto(M.alvo);else renderMapa()},
+  historico:renderHist};
+const SUJAS=new Set();
+function desenharAba(v){if(SUJAS.delete(v))DESENHO[v]()}
+function renderAll(){
+  fillVeicSelect();fillMapSel();renderGaragem();updateCalc();
+  for(const v in DESENHO)SUJAS.add(v);
+  for(const v in DESENHO)if(!$("#v-"+v).hidden)desenharAba(v);
+  if((S.gar.config||{}).gps&&M.watch==null&&!M.gpsErro)startGps(false);
+  anpPerto();
+}
 
 /* ---------- eventos ---------- */
-function show(v){if(!contaConfirmada()&&v!=="cadastro"){S.pendTab=v;v="cadastro"}if(S.tela!==v){S.tela=v;track("tela",{v})}if(v==="conta"){renderConta();$("#contaBtn").setAttribute("aria-current","page")}else $("#contaBtn").removeAttribute("aria-current");document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-"+v);if(v!=="mapa")$("#sheet").hidden=true;else setTimeout(()=>{renderMapa();if(map)map.invalidateSize()},0);try{localStorage.setItem(LS+"-tab",v)}catch(e){}}
+function show(v){if(!contaConfirmada()&&v!=="cadastro"){S.pendTab=v;v="cadastro"}if(S.tela!==v){S.tela=v;track("tela",{v})}if(v==="conta"){renderConta();$("#contaBtn").setAttribute("aria-current","page")}else $("#contaBtn").removeAttribute("aria-current");document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-"+v);if(v!=="mapa"){$("#sheet").hidden=true;if(DESENHO[v])desenharAba(v)}else setTimeout(()=>{SUJAS.delete("mapa");renderMapa();if(map)map.invalidateSize()},0);try{localStorage.setItem(LS+"-tab",v)}catch(e){}}
 document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
 /* ---------- PAINEL ---------- */
 const IC={bomba:'<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 8h5M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/>',gota:'<circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-3.5"/>',estrela:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',sobe:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>'};
@@ -1194,7 +1297,9 @@ $("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b){show(b.datase
 $("#hist").onclick=e=>{const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
 ["#hist","#pUlt"].forEach(s=>$(s).addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches("[data-ab]")){e.preventDefault();abrirEdicao(e.target.dataset.ab)}}));
 
-$("#busca").oninput=()=>{const q=$("#busca").value.trim();if(q.length>=3)carregarAnpUF([...new Set(buscaCidades(q).slice(0,5).map(c=>c.uf))]);renderPostoList()};
+// A busca espera a pessoa parar de digitar (200 ms) antes de filtrar os milhares de postos da ANP.
+let buscaT=null;
+$("#busca").oninput=()=>{clearTimeout(buscaT);buscaT=setTimeout(()=>{const q=$("#busca").value.trim();if(q.length>=3)carregarAnpUF([...new Set(buscaCidades(q).slice(0,5).map(c=>c.uf))]);renderPostoList()},200)};
 $("#postoList").onclick=e=>{const b=e.target.closest(".posto");if(b)selectPosto(b.dataset.id)};
 function abrirNovoPosto(loc,txt,origem){
   const f=$("#novoPosto");f.hidden=false;f.dataset.origem=origem||"";
@@ -1370,7 +1475,7 @@ $("#abForm").onsubmit=async e=>{
   if(!(c.km>0)){toast("Informe a quilometragem atual");return}
   if(c.last&&c.km<=c.last.km){toast(`A quilometragem deve ser maior que ${c.last.km.toLocaleString("pt-BR")} km`);return}
   if(!c.litros||!c.preco||!c.total){toast("Preencha dois entre valor do litro, litros e total pago");return}
-  if(c.last&&!S.stars){toast(`Dê uma nota de 1 a 5 estrelas para ${c.last.postoNome}`);$("#rateCard").scrollIntoView({block:"center"});return}
+  if(Regras.precisaAvaliar(c.last)&&!Regras.notaValida(S.stars)){toast(`Dê uma nota de 1 a 5 estrelas para ${c.last.postoNome}`);$("#rateCard").scrollIntoView({block:"center"});return}
   if(sb&&S.anp[S.sel]&&String(S.sel).startsWith("anp-")){try{const uid=await materializarAnp(S.sel);M.soneca[uid]=M.soneca[S.sel];S.sel=uid}catch(err){toast("Não foi possível registrar o posto: "+(err.message||err.code));return}}
   const v=S.gar.veiculos.find(x=>x.id===c.vid),now=new Date().toISOString(),id="ab-"+Date.now();
   const comb=$("#comb").value,obs=$("#obs").value.trim();
@@ -1438,10 +1543,10 @@ function pintaEdSusp(){const a=S.mine.find(x=>x.id===S.edAb);if(!a)return;const 
   $("#edSuspBtn").hidden=!!sp;$("#edSuspBox").hidden=!sp;$("#edSuspTxt").textContent=sp?`${sp.categoria}: ${sp.motivo}`:"";$("#edSuspNota").hidden=S.edSusp===undefined}
 $("#edSuspBtn").onclick=()=>abrirSuspeita("edicao");$("#edSuspEdit").onclick=()=>abrirSuspeita("edicao");$("#edSuspRm").onclick=()=>{S.edSusp=false;pintaEdSusp()};
 async function gravarSuspEdicao(a,ed){const m=minhaSusp(a);
-  if(ed===false){if(!m)return;if(sb){const {error}=await sb.from("suspeitas").delete().eq("id",m.id);if(error)throw error}
-    S.susp[a.postoId]=susp(a.postoId).filter(x=>x!==m);if(!sb)lsSave();return}
-  if(m){if(sb){const {error}=await sb.from("suspeitas").update({categoria:ed.categoria,motivo:ed.motivo}).eq("id",m.id);if(error)throw error}
-    Object.assign(m,{categoria:ed.categoria,motivo:ed.motivo});if(!sb)lsSave();return}
+  if(ed===false){if(!m)return;if(sb){const {error}=await sb.from("suspeitas").delete().eq("id",m.id);if(error)throw error;REDE.escritas++}
+    S.susp={...S.susp,[a.postoId]:susp(a.postoId).filter(x=>x!==m)};if(!sb)lsSave();return}
+  if(m){if(sb){const {error}=await sb.from("suspeitas").update({categoria:ed.categoria,motivo:ed.motivo}).eq("id",m.id);if(error)throw error;REDE.escritas++}
+    S.susp={...S.susp,[a.postoId]:susp(a.postoId).map(x=>x===m?{...m,categoria:ed.categoria,motivo:ed.motivo}:x)};if(!sb)lsSave();return}
   await saveSuspeita({id:"su-"+Date.now(),postoId:a.postoId,abastId:a.id,categoria:ed.categoria,motivo:ed.motivo,data:new Date().toISOString()});
 }
 $("#suspForm").onsubmit=e=>{e.preventDefault();const motivo=$("#susp-motivo").value.replace(/\s+/g," ").trim();
@@ -1481,7 +1586,7 @@ $("#abEdForm").onsubmit=async e=>{e.preventDefault();
   if(prev&&km<=prev.km){toast(`A quilometragem deve ser maior que ${prev.km.toLocaleString("pt-BR")} km (abastecimento anterior)`);return}
   if(next&&km>=next.km){toast(`A quilometragem deve ser menor que ${next.km.toLocaleString("pt-BR")} km (abastecimento seguinte)`);return}
   if(!preco||!litros||!total){toast("Preencha valor do litro, litros e total pago");return}
-  const med=(x,ant)=>ant&&x.cheio&&ant.cheio&&x.km>ant.km&&x.litros?Math.round((x.km-ant.km)/x.litros*10)/10:null;
+  const med=(x,ant)=>{const m=Regras.mediaKmL(x,ant);return m?Math.round(m*10)/10:null};
   const a2={...a,data:nd.toISOString(),km,comb:$("#ed-comb").value,preco,litros:Math.round(litros*1000)/1000,total,cheio};delete a2.media;
   const ma=med(a2,prev);if(ma)a2.media=ma;
   let next2=null;if(next){next2={...next};delete next2.media;const mn=med(next2,a2);if(mn)next2.media=mn}
@@ -1520,8 +1625,7 @@ $("#saveCfg").onclick=async()=>{const n=k=>parseFloat($(k).value);
 $("#comb").innerHTML=$("#v-comb").innerHTML=$("#vi-comb").innerHTML=$("#mComb").innerHTML=COMBS.map(c=>`<option>${c}</option>`).join("");
 try{const t=localStorage.getItem(LS+"-tab");if(t&&document.getElementById("v-"+t))show(t)}catch(e){}
 /* ---------- CONTA / CADASTRO ---------- */
-const soDig=s=>String(s||"").replace(/\D/g,"");
-function cpfOk(c){c=soDig(c);if(c.length!==11||/^(\d)\1+$/.test(c))return false;for(let t=9;t<11;t++){let s=0;for(let i=0;i<t;i++)s+=+c[i]*(t+1-i);if((s*10)%11%10!==+c[t])return false}return true}
+const soDig=Regras.soDig,cpfOk=Regras.cpfValido;
 const fmtCpf=c=>{c=soDig(c).slice(0,11);if(c.length<=3)return c;if(c.length<=6)return c.slice(0,3)+"."+c.slice(3);if(c.length<=9)return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6);return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6,9)+"-"+c.slice(9)};
 const fmtWhats=w=>{w=soDig(w).slice(0,11);if(w.length<3)return w;const r=w.slice(2);return `(${w.slice(0,2)}) `+(w.length>10?r.slice(0,5)+"-"+r.slice(5):r.length>4?r.slice(0,4)+"-"+r.slice(4):r)};
 const mascCpf=c=>{c=soDig(c);return c.length===11?`***.${c.slice(3,6)}.${c.slice(6,9)}-**`:"—"};
@@ -1550,7 +1654,7 @@ function sha256(str){
 function hashSenha(senha,sal){let h=sal+":"+senha;for(let i=0;i<3000;i++)h=sha256(sal+h);return h}
 function novaSenha(senha){const sal=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");return {sal,hash:hashSenha(senha,sal)}}
 const senhaConfere=(c,senha)=>!!(c.senha&&hashSenha(senha,c.senha.sal)===c.senha.hash);
-const senhaErro=(a,b)=>a.length<8||!/[A-Za-z]/.test(a)||!/\d/.test(a)?"A senha precisa ter pelo menos 8 caracteres, com letras e números.":a!==b?"As senhas não conferem.":"";
+const senhaErro=Regras.senhaErro;
 const whatsMasc=w=>{w=soDig(w);return w.length===11?`(${w.slice(0,2)}) *****-${w.slice(7)}`:fmtWhats(w)};
 function acharConta(v){
   v=String(v||"").trim();const email=v.includes("@")?v.toLowerCase():null,cpf=soDig(v);
@@ -1595,7 +1699,7 @@ async function sair(msg){
   if(sb){track("logout");try{await sb.auth.signOut()}catch(e){}}
   lsSet(LS_2FA,null);
   S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="painel";S.isOwner=false;S.usuarios=[];
-  if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.susp={};S.pubNome={}}else entrarLocal(null);
+  if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.susp={};S.pubNome={};zerarRede()}else entrarLocal(null);
   fillCadForm({});["#lg-senha","#cd-senha","#cd-senha2","#cd-code"].forEach(x=>$(x).value="");
   if(msg)toast(msg);S.auth="login";renderAll();gate();
 }
@@ -1687,7 +1791,7 @@ $("#cadForm").onsubmit=async e=>{
   const nome=$("#cd-nome").value.trim().replace(/\s+/g," "),cpf=soDig($("#cd-cpf").value),email=$("#cd-email").value.trim().toLowerCase(),whats=soDig($("#cd-whats").value);
   const nova=comLogin()&&!S.editando,completar=!!(sb&&S.uid&&!S.conta),outro=id=>id&&id!==S.uid;
   let erro=nome.split(" ").length<2?"Informe nome e sobrenome.":!cpfOk(cpf)?"CPF inválido. Confira os números.":!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)?"E-mail inválido.":
-    !(whats.length===11&&whats[2]==="9")?"WhatsApp inválido. Use DDD + celular, ex.: (11) 98765-4321.":"";
+    !Regras.whatsValido(whats)?"WhatsApp inválido. Use DDD + celular, ex.: (11) 98765-4321.":"";
   if(!erro&&S.mode==="local"&&outro(acharConta(cpf)))erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
   if(!erro&&S.mode==="local"&&outro(acharConta(email)))erro="Já existe uma conta com este e-mail.";
   if(!erro&&nova&&!completar)erro=senhaErro($("#cd-senha").value,$("#cd-senha2").value);
@@ -1742,7 +1846,7 @@ $("#cadCode").onsubmit=async e=>{
   c.status="confirmado";c.confirmadoEm=new Date().toISOString();delete c.codigo;delete c.tentativas;
   // dados da versão antiga sem login: ficam com a primeira conta criada no aparelho
   const orf=S.mode==="local"?lsGet(LS_ORFAO,null):null;
-  if(orf){S.mine=orf.mine||[];if(orf.gar)S.gar=orf.gar;if(orf.pub)S.pub[S.uid]=orf.pub;lsSet(LS_ORFAO,null)}
+  if(orf){S.mine=orf.mine||[];if(orf.gar)S.gar=orf.gar;if(orf.pub)S.pub={...S.pub,[S.uid]:orf.pub};lsSet(LS_ORFAO,null)}
   try{await saveConta(c);
     if(sb){await Promise.all([carregarRede(),carregarMeus()]);S.isOwner=!!S.conta.isAdmin}
     $("#codeErr").textContent="";$("#cd-code").value="";renderAll();track("conta_confirmada");
@@ -1791,4 +1895,8 @@ function renderAdmin(){
 }
 
 init();
+// PWA: instalável e abre sem internet. Aberto direto do disco (file://) não há service worker.
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+// com o app aberto e o navegador ocioso, o Leaflet já vem, para o mapa abrir sem espera
+(window.requestIdleCallback?f=>requestIdleCallback(f,{timeout:8000}):f=>setTimeout(f,3000))(()=>carregarLeaflet().catch(()=>{}));
 </script>

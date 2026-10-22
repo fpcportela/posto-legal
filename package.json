@@ -1,0 +1,11 @@
+{
+  "name": "posto-legal",
+  "private": true,
+  "description": "Posto Legal: testes das regras do protótipo (prototipo/regras.js)",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

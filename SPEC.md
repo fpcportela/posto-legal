@@ -20,7 +20,7 @@ ci:                        # o que o CI de PR roda (aiteam/AGENTS.md §CI/CD Man
 deploy:
   workflow: none
   reason: "hoje o GitHub Pages (build legado) publica a main sozinho em fpcportela.github.io/posto-legal; o deploy.yml versionado entra na migração para a Hostinger (§7)"
-last_updated: "2026-10-08"
+last_updated: "2026-10-22"
 ---
 
 # Especificação do Projeto — Posto Legal
@@ -37,8 +37,8 @@ Nas próximas semanas o trabalho segue **em paralelo**: amadurecer a versão web
 
 ## 2. Arquitetura
 
-- **Frontend web:** `prototipo/index.html` — HTML/CSS/JS sem build, Leaflet 1.9.4 (cdnjs) com fundo do OpenStreetMap (tile.openstreetmap.org, escurecido por CSS), busca de endereço pelo Photon (OSM). O `index.html` da raiz só redireciona para `prototipo/`. Roda em modo local (localStorage) quando `SUPABASE_URL`/`SUPABASE_KEY` estão vazios.
-- **Regras de negócio:** serão extraídas para um módulo JS puro (ex.: `prototipo/regras.js`) importado pelo protótipo e pelos testes — e, depois, pelo app Expo. Ver §4.
+- **Frontend web:** `prototipo/index.html` — HTML/CSS/JS sem build, Leaflet 1.9.4 (cdnjs, baixado só quando o mapa abre) com fundo escolhido em `MAPA_FUNDO` (padrão: OpenStreetMap, tile.openstreetmap.org, escurecido por CSS — ver §7), busca de endereço pelo Photon (OSM). O `index.html` da raiz só redireciona para `prototipo/`. Roda em modo local (localStorage) quando `SUPABASE_URL`/`SUPABASE_KEY` estão vazios.
+- **Regras de negócio:** `prototipo/regras.js`, módulo JS puro em script clássico (o protótipo abre direto do disco, onde ES modules não carregam): `window.Regras` no navegador, `require` nos testes e, depois, no app Expo.
 - **App nativo (a começar):** React Native com Expo, numa pasta própria deste repo (ex.: `app/`). `expo-location` + `expo-task-manager` (geofence) e `expo-notifications`.
 - **Backend:** Supabase — Postgres com RLS, Supabase Auth (e-mail + senha; CPF convertido em e-mail por `email_do_login`). Edge Functions para o que exigir servidor (código do WhatsApp).
 - **Banco:** `supabase/schema.sql` é a fonte do schema. Mudança de schema = editar esse arquivo de forma idempotente (`if not exists`, `create or replace`).
@@ -56,7 +56,9 @@ Tabelas do Supabase (`supabase/schema.sql`), todas com RLS:
 - **garagem** — 1 por usuário, `dados` jsonb: veículos (com combustível usual) e configuração (alertas de reputação, GPS). Privado.
 - **abastecimentos** — por usuário e veículo: km, combustível, preço, total, litros, tanque cheio, posto, `km_l`, data. Privado.
 - **avaliacoes** — por usuário e posto: nota, comentário, combustível, preço, modelo do carro, km/l. Leitura pública; cada usuário escreve só as próprias.
-- **eventos** — telemetria de uso (tipo, tela, dados jsonb, sessão); visão `uso_por_dia` para o administrador.
+- **suspeitas** — relatos de suspeita de fraude por posto (categoria, motivo). Leitura pública; cada usuário grava/apaga os próprios; admin apaga abusos.
+- **eventos** — telemetria de uso (tipo, tela, dados jsonb, sessão); visão `uso_por_dia` para o administrador. Depois de 90 dias viram resumo diário em **uso_diario** (dia, tipo, eventos, pessoas).
+- **apagados** — só tabela e id das linhas apagadas de postos, avaliações e suspeitas (30 dias), para a sincronização incremental. Junto com `atualizado_em` (gatilho) nessas três tabelas.
 
 Regras de domínio (invariantes — não mudar sem decisão humana):
 
@@ -69,7 +71,7 @@ Regras de domínio (invariantes — não mudar sem decisão humana):
 ## 4. Escopo
 
 ### Dentro do escopo
-- [ ] **Suíte de testes:** extrair as regras puras do `prototipo/index.html` (média km/l, regra da avaliação, validação de CPF e WhatsApp, política de senha, cor do marcador por reputação) para um módulo JS; `package.json` na raiz com Vitest; `npm test` rodando em PR via `.github/workflows/ci.yml`.
+- [x] **Suíte de testes:** extrair as regras puras do `prototipo/index.html` (média km/l, regra da avaliação, validação de CPF e WhatsApp, política de senha, cor do marcador por reputação) para um módulo JS; `package.json` na raiz com Vitest; `npm test` rodando em PR via `.github/workflows/ci.yml`.
 - [ ] **Web pronto para o grupo de teste:** Supabase em uso real, administrador, eventos de uso.
 - [ ] **WhatsApp real:** Edge Function que gera o código, guarda só o hash (validade de 10 min), envia pela Cloud API da Meta e confere no servidor; limite de envios por número/IP. O código nunca chega ao aparelho pelo banco.
 - [ ] **Base de postos da ANP:** importar revendedores (CNPJ, bandeira, endereço) para `postos`, com geocodificação quando faltar coordenada; deduplicar com os postos cadastrados por usuários.
@@ -85,7 +87,8 @@ Regras de domínio (invariantes — não mudar sem decisão humana):
 Não há API própria: o cliente fala direto com o Supabase (PostgREST + Auth) sob RLS. Os contratos são:
 
 - **Schema e políticas:** `supabase/schema.sql`. Toda tabela nova tem RLS ligado e política explícita.
-- **Funções SQL expostas:** `is_admin()`, `email_do_login(ident text) → text`, `cadastro_em_uso(p_cpf text, p_email text) → text`.
+- **Funções SQL expostas:** `is_admin()`, `email_do_login(ident text) → text`, `cadastro_em_uso(p_cpf text, p_email text) → text`, `uso_resumo(dias integer) → jsonb` (`{ativos, por_tipo}`, só administrador). Não exposta ao app: `manutencao(dias_eventos integer) → integer` (pg_cron/SQL Editor).
+- **Leitura da rede:** paginada (o PostgREST do Supabase devolve no máximo 1.000 linhas por pedido) e incremental — `atualizado_em > última mudança vista − 2 min` em postos/avaliações/suspeitas, mais `apagados`.
 - **Edge Functions (a criar):** envio e verificação do código do WhatsApp — o contrato entra aqui quando forem desenhadas.
 - **Módulo de regras (a criar):** funções puras, sem DOM, sem rede, sem `localStorage`, usadas pelo web, pelo app e pelos testes.
 
@@ -101,7 +104,7 @@ Não há API própria: o cliente fala direto com o Supabase (PostgREST + Auth) s
   - Chave do Supabase no cliente é só a `anon`; a `service_role` nunca entra no repositório nem no front.
   - Segredos (Meta, service_role) ficam nos secrets do Supabase/GitHub.
   - Senha e código de verificação são responsabilidade do servidor no modo online. O hash local (SHA-256 com sal) é só do modo protótipo.
-- **Desempenho:** o mapa deve continuar fluido com a base da ANP carregada — buscar postos por área visível, não a base inteira.
+- **Desempenho:** o mapa deve continuar fluido com a base da ANP carregada — buscar postos por área visível, não a base inteira. A estatística dos postos vem de um índice refeito só quando os dados mudam; só a aba visível é desenhada; a rede sincroniza só o que mudou; políticas RLS usam `(select auth.uid())`.
 - **Observabilidade:** eventos de uso em `eventos`, painel "Uso do app" para o administrador.
 
 ## 7. Decisões em Aberto
@@ -113,6 +116,7 @@ Não há API própria: o cliente fala direto com o Supabase (PostgREST + Auth) s
 - [ ] **Avaliações ao excluir a conta:** apagar ou anonimizar (elas alimentam a nota pública do posto).
 - [ ] **Estrutura do monorepo:** nome da pasta do app Expo e como o módulo de regras é compartilhado entre web e app (caminho relativo, pacote de workspace).
 - [ ] **Geocodificação dos postos da ANP:** Photon/Nominatim respeitando os limites de uso, ou outra fonte gratuita.
+- [ ] **Fundo do mapa em produção:** o tile.openstreetmap.org não aceita o tráfego de um app. O código já troca de fundo por `MAPA_FUNDO` (`"stadia"` pronto); os planos grátis da Stadia Maps e da MapTiler são para uso não comercial — decidir o serviço e o plano antes de abrir ao público.
 
 ## 8. Ferramentas de Observabilidade
 
@@ -123,7 +127,7 @@ Não há API própria: o cliente fala direto com o Supabase (PostgREST + Auth) s
 
 > Mandato: `aiteam/AGENTS.md` §CI/CD Mandate.
 
-- [ ] Pipeline em PR, bloqueante, rodando `npm test` na raiz (`.github/workflows/ci.yml`, modelo `aiteam/templates/ci.yml.example`): `<a criar junto com a suíte de testes>`
+- [x] Pipeline em PR, bloqueante, rodando `npm test` na raiz (`.github/workflows/ci.yml`, modelo `aiteam/templates/ci.yml.example`): jobs `framework` (aiteam/) e `app` (`npm ci` + `npm test`)
 - [ ] Deploy de produção só via `.github/workflows/deploy.yml` a partir da `main` — hoje `workflow: none` (GitHub Pages legado), ver §7
 - [ ] Gate humano: comando de disparo do deploy registrado em `ask_patterns` (`.claude/tier-rules.json`): `<na migração para a Hostinger>`
 - [ ] Secrets exclusivamente no secret store do CI/Supabase
@@ -136,3 +140,4 @@ Não há API própria: o cliente fala direto com o Supabase (PostgREST + Auth) s
 | Data | Mudança | Autor |
 |------|---------|-------|
 | 2026-10-08 | SPEC inicial, na adoção do rb-ai-team (entrevista) | Fabio Portela Carvalho |
+| 2026-10-22 | Revisão de desempenho: `regras.js` + Vitest + CI; sincronização incremental e paginada; RLS com initplan e índices; retenção de eventos; decisão aberta sobre o fundo do mapa | Fabio Portela Carvalho (com Claude) |
