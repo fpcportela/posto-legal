@@ -1,0 +1,11 @@
+title: "Conta só com celular/WhatsApp (sem CPF, e-mail e senha)"
+created_at: "2026-10-21T17:18:23Z"
+entries:
+  - at: "2026-10-21T17:18:23Z"
+    status: "in_progress"
+  - at: "2026-10-21T17:18:24Z"
+    status: "completed"
+    context_summary: "Cadastro com nome e celular; login por código no WhatsApp; Supabase Auth por telefone no modo online (envio depende do provedor Phone, ver SPEC §7)."
+    tags:
+      - "auth"
+      - "lgpd"

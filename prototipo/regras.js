@@ -25,14 +25,8 @@ const precisaAvaliar=ultimo=>!!ultimo;
 const notaValida=n=>typeof n==="number"&&n>=1&&n<=5&&n*2===Math.trunc(n*2);
 
 /* ---------- cadastro e login ---------- */
-function cpfValido(c){
-  c=soDig(c);if(c.length!==11||/^(\d)\1+$/.test(c))return false;
-  for(let t=9;t<11;t++){let s=0;for(let i=0;i<t;i++)s+=+c[i]*(t+1-i);if((s*10)%11%10!==+c[t])return false}
-  return true;
-}
-// DDD + celular: 11 dígitos, e o terceiro é o 9 do celular.
+// O celular com WhatsApp é a conta: DDD + celular, 11 dígitos, e o terceiro é o 9 do celular.
 const whatsValido=w=>{w=soDig(w);return w.length===11&&w[2]==="9"};
-const senhaErro=(a,b)=>a.length<8||!/[A-Za-z]/.test(a)||!/\d/.test(a)?"A senha precisa ter pelo menos 8 caracteres, com letras e números.":a!==b?"As senhas não conferem.":"";
 
 /* ---------- reputação do posto ---------- */
 function agruparPorPosto(itens){
@@ -95,5 +89,5 @@ function montarRede({postos,aval,susp}){
   return {postos:P,pub,pubNome,susp:su};
 }
 
-return {soDig,nOuNulo,mediaKmL,ultimoAbastecimento,precisaAvaliar,notaValida,cpfValido,whatsValido,senhaErro,agruparPorPosto,statsDoPosto,reputacao,distM,mesclarLinhas,ultimaMudanca,montarRede};
+return {soDig,nOuNulo,mediaKmL,ultimoAbastecimento,precisaAvaliar,notaValida,whatsValido,agruparPorPosto,statsDoPosto,reputacao,distM,mesclarLinhas,ultimaMudanca,montarRede};
 });

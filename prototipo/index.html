@@ -168,6 +168,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ab{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
 .ab .r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .ab .s{font-size:.8rem;color:var(--muted)}
+.ab-main{min-width:0;display:grid;gap:4px}
+.ab-nome{overflow-wrap:anywhere;line-height:1.25}
+.p-filtro{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:4px 0 12px}
+.p-filtro label{margin:0;color:var(--muted);font-size:.85rem}
+.p-filtro select{width:auto;min-width:180px}
+.ab-posto{grid-column:1/-1;text-align:right;margin-top:6px;padding-top:8px;border-top:1px dashed var(--line);color:var(--ink)}
+.ab-posto svg,.ed-posto svg{display:inline-block;width:15px;height:15px;vertical-align:-2px;margin-right:6px;fill:none;stroke:var(--brand);stroke-width:2}
+.ed-rodape{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.ed-posto{margin-left:auto;text-align:right;max-width:100%;color:var(--ink)}
+.ab-selos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:2px}
+.ab-selos .tq,.ab-selos .susp{margin-left:0;vertical-align:0}
+.ab .r .ab-total{display:block;font-size:1rem;font-weight:600;color:var(--ink);white-space:nowrap}
 .ab .dest{color:var(--brand);font-weight:700}
 .ab[data-ab]{cursor:pointer}
 .ab[data-ab]:hover,.ab[data-ab]:focus-visible{border-color:var(--line2);background:var(--surface-2,var(--surface))}
@@ -260,52 +272,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="card" id="cadLoading"><p class="note">Carregando sua conta…</p></div>
     <form class="card" id="loginForm" hidden novalidate>
       <h2>Entrar</h2>
-      <p class="note">Para usar o Posto Legal é obrigatório ter uma conta. Entre com seu CPF ou e-mail e sua senha. Depois, confirme o código enviado ao seu WhatsApp.</p>
-      <label>CPF ou e-mail<input id="lg-id" autocomplete="username" placeholder="000.000.000-00 ou voce@email.com"></label>
-      <label>Senha<input id="lg-senha" type="password" autocomplete="current-password"></label>
-      <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
+      <p class="note">Para usar o Posto Legal é obrigatório ter uma conta. Informe o celular com WhatsApp da sua conta e digite o código que enviamos para ele.</p>
+      <label>Celular (WhatsApp)<input id="lg-whats" inputmode="tel" autocomplete="tel-national" placeholder="(11) 98765-4321" maxlength="15"></label>
       <div class="note" id="lgErr" style="color:var(--bad)"></div>
-      <button class="btn block" type="submit">Entrar</button>
-      <div class="row between"><button class="btn ghost small" type="button" id="lgEsqueci">Esqueci minha senha</button><button class="btn ghost small" type="button" id="lgCriar">Criar conta</button></div>
-    </form>
-    <form class="card" id="esqForm" hidden novalidate>
-      <h2>Recuperar senha</h2>
-      <p class="note" id="eqIntro">Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.</p>
-      <label>CPF ou e-mail<input id="eq-id" autocomplete="username"></label>
-      <div class="note" id="eqErr" style="color:var(--bad)"></div>
-      <div class="note" id="eqOk" style="color:var(--good)"></div>
-      <div class="row"><button class="btn" type="submit">Enviar código</button><button class="btn ghost" type="button" id="eqVoltar">Voltar</button></div>
-    </form>
-    <form class="card" id="senhaForm" hidden novalidate>
-      <h2>Crie uma nova senha</h2>
-      <label>Nova senha<input id="ns-senha" type="password" autocomplete="new-password"></label>
-      <label>Repita a nova senha<input id="ns-senha2" type="password" autocomplete="new-password"></label>
-      <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
-      <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
-      <div class="note" id="nsErr" style="color:var(--bad)"></div>
-      <button class="btn block" type="submit">Salvar senha e entrar</button>
+      <button class="btn block" type="submit">Receber código no WhatsApp</button>
+      <div class="row between"><span class="note">Ainda não tem conta?</span><button class="btn ghost small" type="button" id="lgCriar">Criar conta</button></div>
     </form>
     <form class="card" id="cadForm" hidden novalidate>
       <h2 id="cadTit">Crie sua conta</h2>
       <p class="note" id="cadIntro">Para usar o Posto Legal é obrigatório criar sua conta. Com ela você registra abastecimentos, vê o mapa e avalia postos. A confirmação é feita pelo WhatsApp.</p>
       <label>Nome completo<input id="cd-nome" autocomplete="name"></label>
-      <label>CPF<input id="cd-cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"></label>
-      <label>E-mail<input id="cd-email" type="email" autocomplete="email" placeholder="voce@email.com"></label>
-      <label>WhatsApp<input id="cd-whats" inputmode="tel" placeholder="(11) 98765-4321" maxlength="15"></label>
-      <div id="cadSenhas" class="hist">
-        <label>Senha<input id="cd-senha" type="password" autocomplete="new-password"></label>
-        <label>Repita a senha<input id="cd-senha2" type="password" autocomplete="new-password"></label>
-        <label class="check"><input type="checkbox" class="verSenha">Mostrar senha</label>
-        <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
-      </div>
-      <label class="check"><input type="checkbox" id="cd-lgpd">Concordo com o uso dos meus dados para criar a conta e com o registro do meu uso do app (telas, abastecimentos e avaliações) para análise e melhoria do serviço, conforme a LGPD. CPF, e-mail e WhatsApp não aparecem para outros motoristas.</label>
+      <label>Celular (WhatsApp)<input id="cd-whats" inputmode="tel" autocomplete="tel-national" placeholder="(11) 98765-4321" maxlength="15"></label>
+      <p class="note" id="cdWhatsNota">É com este número que você entra no app: a cada acesso enviamos um código para ele.</p>
+      <label class="check"><input type="checkbox" id="cd-lgpd">Concordo com o uso dos meus dados para criar a conta e com o registro do meu uso do app (telas, abastecimentos e avaliações) para análise e melhoria do serviço, conforme a LGPD. Seu número de WhatsApp não aparece para outros motoristas.</label>
       <div class="note" id="cadErr" style="color:var(--bad)"></div>
       <div class="row"><button class="btn" type="submit">Continuar</button><button class="btn ghost" type="button" id="cadCancel" hidden>Cancelar</button><button class="btn ghost" type="button" id="cadEntrar" hidden>Já tenho conta</button></div>
     </form>
     <form class="card" id="cadCode" hidden novalidate>
       <h2>Confirme pelo WhatsApp</h2>
       <p class="note" id="codeMsg"></p>
-      <div class="demo"><span><b>Simulação do protótipo.</b> No app real o código chega por mensagem no WhatsApp. Aqui ele aparece na tela: <b id="codeDemo" class="score"></b></span></div>
+      <div class="demo" id="codeDemoBox"><span><b>Simulação do protótipo.</b> No app real o código chega por mensagem no WhatsApp. Aqui ele aparece na tela: <b id="codeDemo" class="score"></b></span></div>
       <label>Código de 6 dígitos<input id="cd-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:1.4rem;letter-spacing:.3em;text-align:center"></label>
       <div class="note" id="codeErr" style="color:var(--bad)"></div>
       <button class="btn block" type="submit" id="codeBtn">Confirmar conta</button>
@@ -325,6 +311,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <button class="btn sec big" id="pRank"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Ver ranking de postos</button>
       </div>
     </div>
+    <div class="p-filtro" id="pFiltro" hidden><label for="pVeicSel">Veículo</label><select id="pVeicSel" aria-label="Filtrar por veículo"></select></div>
     <div class="stats" id="pStats"></div>
     <div id="pPend" class="hist"></div>
     <div id="pUlt" class="hist"></div>
@@ -369,7 +356,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <h3 id="vInlineTit">Cadastre seu veículo</h3>
           <div class="two">
             <label>Modelo<input id="vi-modelo" placeholder="Onix 1.0 2022"></label>
-            <label>Placa<input id="vi-placa" placeholder="ABC1D23" maxlength="8"></label>
+            <label>Placa<input id="vi-placa" placeholder="ABC1D23" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></label>
           </div>
           <label>Combustível usual<select id="vi-comb"></select></label>
           <div class="row"><button class="btn" type="button" id="viSave">Salvar veículo</button><button class="btn ghost" type="button" id="viCancel">Cancelar</button></div>
@@ -377,7 +364,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <label>Quilometragem atual (km)<input type="number" id="km" inputmode="numeric" min="0" step="1"></label>
         <div class="two">
           <label>Combustível<select id="comb"></select></label>
-          <label>Valor do litro (R$)<input type="text" class="money" id="preco" inputmode="numeric" placeholder="0,00" autocomplete="off"></label>
+          <label>Valor do litro (R$)<input type="text" class="money" id="preco" inputmode="numeric" placeholder="0,000" autocomplete="off"></label>
         </div>
         <div class="two">
           <label>Litros<input type="text" class="money" id="litros" inputmode="numeric" placeholder="0,00" autocomplete="off"></label>
@@ -469,7 +456,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     </div>
     <p class="note" id="edSuspNota" hidden>A alteração na suspeita é gravada ao salvar.</p>
     <p class="note">Ao salvar, a média deste abastecimento e a do seguinte são recalculadas.</p>
-    <div class="row"><button class="btn" type="submit" id="abEdSalvar">Salvar alterações</button><button class="btn ghost" type="button" id="abEdCancel">Cancelar</button></div>
+    <div class="ed-rodape"><div class="row"><button class="btn" type="submit" id="abEdSalvar">Salvar alterações</button><button class="btn ghost" type="button" id="abEdCancel">Cancelar</button></div><div class="ed-posto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><b class="ab-nome" id="abEdPostoNome"></b></div></div>
   </form></div>
   <div class="modal-bg" id="suspVer" hidden role="dialog" aria-modal="true" aria-labelledby="suspVerTit"><div class="card" id="suspVerIn"></div></div>
   <div class="modal-bg" id="gpsAsk" hidden role="dialog" aria-modal="true" aria-labelledby="gpsTit"><div class="card" id="gpsIn"></div></div>
@@ -496,20 +483,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="card" id="contaCard"></div>
     <div class="kpis" id="contaKpis"></div>
     <div class="card" id="usoCard" hidden><div class="row between"><h3>Uso do app</h3><button class="btn ghost small" type="button" id="usoAtual">Atualizar</button></div><div id="usoBody" style="display:grid;gap:10px"><p class="note">Carregando…</p></div></div>
-    <form class="card" id="trocaSenha" novalidate>
-      <h3 id="tsTit">Alterar senha</h3>
-      <label id="tsAtualL">Senha atual<input id="ts-atual" type="password" autocomplete="current-password"></label>
-      <div class="two">
-        <label>Nova senha<input id="ts-nova" type="password" autocomplete="new-password"></label>
-        <label>Repita a nova senha<input id="ts-nova2" type="password" autocomplete="new-password"></label>
-      </div>
-      <p class="note">Mínimo de 8 caracteres, com letras e números.</p>
-      <div class="note" id="tsErr" style="color:var(--bad)"></div>
-      <div><button class="btn ghost" type="submit" id="tsBtn">Alterar senha</button></div>
-    </form>
     <div class="card" id="sairCard">
       <h3>Sair</h3>
-      <p class="note">Ao sair, o app volta para a tela de entrada. Para entrar de novo, use seu CPF ou e-mail e a senha, e confirme o código no WhatsApp. Seus dados ficam guardados na sua conta.</p>
+      <p class="note">Ao sair, o app volta para a tela de entrada. Para entrar de novo, informe seu celular e digite o código que enviamos pelo WhatsApp. Seus dados ficam guardados na sua conta.</p>
       <div><button class="btn ghost" id="sairBtn">Sair da conta</button></div>
     </div>
   </section>
@@ -524,7 +500,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <h3>Novo veículo</h3>
         <div class="two">
           <label>Modelo<input id="v-modelo" placeholder="Onix 1.0 2022" required></label>
-          <label>Placa<input id="v-placa" placeholder="ABC1D23" maxlength="8"></label>
+          <label>Placa<input id="v-placa" placeholder="ABC1D23" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" style="text-transform:uppercase"></label>
         </div>
         <label>Combustível usual<select id="v-comb"></select></label>
         <div class="row"><button class="btn" type="submit">Salvar veículo</button><button class="btn ghost" type="button" id="vCancel">Cancelar</button></div>
@@ -534,15 +510,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
       <h3>Alertas de reputação</h3>
       <p class="note">Ao chegar num posto, o app avisa conforme a nota média dele.</p>
       <div class="two">
-        <label>Avisar “péssimo” com nota até<input type="number" id="c-baixo" step="0.1" min="1" max="5"></label>
-        <label>Avisar “ótimo” com nota a partir de<input type="number" id="c-alto" step="0.1" min="1" max="5"></label>
+        <label>Avisar “péssimo” com nota até<select id="c-baixo" class="notaSel"></select></label>
+        <label>Avisar “ótimo” com nota a partir de<select id="c-alto" class="notaSel"></select></label>
       </div>
       <label>Mínimo de avaliações para avisar<input type="number" id="c-min" step="1" min="1"></label>
       <button class="btn ghost" id="saveCfg">Salvar alertas</button>
     </div>
     <div class="card" id="adminCard" hidden>
       <div class="row between"><h3>Usuários cadastrados</h3><span class="note">Visível só para você, dono do app</span></div>
-      <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Nome</th><th>CPF</th><th>E-mail</th><th>WhatsApp</th><th>Situação</th><th>Cadastro</th></tr></thead><tbody id="userRows"></tbody></table></div>
+      <div style="overflow-x:auto"><table class="utable"><thead><tr><th>Nome</th><th>WhatsApp</th><th>Situação</th><th>Cadastro</th></tr></thead><tbody id="userRows"></tbody></table></div>
     </div>
   </section>
 </div>
@@ -555,13 +531,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 const SUPABASE_URL="",SUPABASE_KEY="";
 const COMBS=["Gasolina comum","Gasolina aditivada","Gasolina premium","Etanol","Diesel S10","Diesel S500","GNV"];
 const RATE_TXT=["","Não gostei","Ruim","Regular","Bom","Gostei muito"];
-const CFG_PADRAO={baixo:2.5,alto:4.2,min:2};
+const CFG_PADRAO={baixo:2.5,alto:4,min:2};
+// as notas são dadas em meias estrelas: os limites dos alertas também andam de 0,5 em 0,5
+const meioPonto=v=>Math.min(5,Math.max(1,Math.round(Number(v)*2)/2));
+const cfgAlertas=()=>{const c={...CFG_PADRAO,...(S.gar.config||{})};return {...c,baixo:meioPonto(c.baixo),alto:meioPonto(c.alto)}};
 const S={uid:null,mode:"local",postos:{},anp:{},pub:{},susp:{},suspPend:null,mine:[],gar:{veiculos:[],config:{...CFG_PADRAO}},demo:false,sel:null,stars:0,names:{},pubNome:{},conta:null,contaOk:false,usuarios:[],isOwner:false};
 let db=null,user=null,sample=null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=(v,d=1)=>v==null||isNaN(v)?"—":Number(v).toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const brl=v=>v==null||isNaN(v)?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+// preço do litro: 3 casas decimais (R$ 6,899)
+const brlL=v=>v==null||isNaN(v)?"—":Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:3,maximumFractionDigits:3});
 const fdata=iso=>iso?new Date(iso).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"—";
 function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
 const starsHtml=v=>`<span class="stars" style="--p:${Math.max(0,Math.min(100,(v||0)/5*100))}%">★★★★★</span>`;
@@ -663,7 +644,7 @@ function stats(pid){
   return st;
 }
 function reputacao(st){
-  const {cls,motivo}=Regras.reputacao(st,S.gar.config||CFG_PADRAO),m=num(st.media),n=st.n;
+  const {cls,motivo}=Regras.reputacao(st,cfgAlertas()),m=num(st.media),n=st.n;
   switch(motivo){
     case "sem-nota":return {cls,tit:"Posto ainda sem avaliações",txt:"Os motoristas avaliam o posto no abastecimento seguinte, depois de rodar com o combustível dele."};
     case "poucas":return {cls,tit:`Nota ${m} com poucas avaliações`,txt:`Só ${n} avaliação(ões) até agora.`};
@@ -729,7 +710,7 @@ function lsSave(){
 }
 /* ---------- banco online (Supabase) ---------- */
 let sb=null;
-const SESSAO=Math.random().toString(36).slice(2,10),LS_2FA=LS+"-2fa",LS_COD=LS+"-cod-";
+const SESSAO=Math.random().toString(36).slice(2,10);
 const comLogin=()=>S.mode==="local"||S.mode==="supa";
 const nOuNulo=v=>v==null||v===""?null:Number(v);
 // registro de uso: só no banco online; nunca atrapalha o app se falhar
@@ -738,8 +719,8 @@ function track(tipo,dados){
   try{sb.from("eventos").insert({user_id:S.uid||null,sessao:SESSAO,tipo,dados:dados||null,tela:S.tela||null,agente:navigator.userAgent.slice(0,180)}).then(()=>{},()=>{})}catch(e){}
 }
 function carregarScript(src){return new Promise((ok,falha)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>falha(new Error("script"));document.head.appendChild(s)})}
-const perfilDe=r=>({nome:r.nome,cpf:r.cpf,email:r.email,whats:r.whats,status:r.status,lgpdEm:r.lgpd_em,criadoEm:r.criado_em,atualizadoEm:r.atualizado_em,confirmadoEm:r.confirmado_em,isAdmin:r.is_admin});
-const perfilLinha=c=>({id:S.uid,nome:c.nome,cpf:c.cpf,email:c.email,whats:c.whats,status:c.status,lgpd_em:c.lgpdEm||null,criado_em:c.criadoEm||undefined,confirmado_em:c.confirmadoEm||null});
+const perfilDe=r=>({nome:r.nome,whats:r.whats,status:r.status,lgpdEm:r.lgpd_em,criadoEm:r.criado_em,atualizadoEm:r.atualizado_em,confirmadoEm:r.confirmado_em,isAdmin:r.is_admin});
+const perfilLinha=c=>({id:S.uid,nome:c.nome,whats:c.whats,status:c.status,lgpd_em:c.lgpdEm||null,criado_em:c.criadoEm||undefined,confirmado_em:c.confirmadoEm||null});
 const abDe=r=>{const a={id:r.id,veiculoId:r.veiculo_id,postoId:r.posto_id,postoNome:r.posto_nome,km:Number(r.km),comb:r.comb,preco:nOuNulo(r.preco),total:nOuNulo(r.total),litros:nOuNulo(r.litros),cheio:!!r.cheio,data:r.data};
   if(r.media!=null)a.media=Number(r.media);if(r.estrelas!=null)a.estrelas=Number(r.estrelas);if(r.obs)a.obs=r.obs;if(r.km_l!=null)a.kmL=Number(r.km_l);if(r.avaliado_em)a.avaliadoEm=r.avaliado_em;return a};
 const abLinha=a=>({id:a.id,user_id:S.uid,veiculo_id:a.veiculoId,veiculo_modelo:((S.gar.veiculos||[]).find(v=>v.id===a.veiculoId)||{}).modelo||null,posto_id:a.postoId,posto_nome:a.postoNome,km:a.km,comb:a.comb,preco:a.preco,total:a.total,litros:a.litros,cheio:!!a.cheio,
@@ -788,10 +769,8 @@ async function carregarMeus(){
   const d=g.data&&g.data.dados;S.gar=d&&d.veiculos?{...garPadrao(),...d}:garPadrao();S.mine=ab.map(abDe);
 }
 async function entrarSupa(uid){
-  S.uid=uid;const f=lsGet(LS_2FA,null);
-  if(f&&f.uid===uid){S.fluxo=f;S.conta=null;return} // falta o código do WhatsApp deste login
-  let c=await carregarPerfil(uid);
-  if(c&&c.status!=="confirmado"){const k=lsGet(LS_COD+uid,null)||{codigo:novoCodigo(),tentativas:0};c={...c,...k};lsSet(LS_COD+uid,k)}
+  S.uid=uid;
+  const c=await carregarPerfil(uid); // sem perfil: o número já foi confirmado, falta completar o cadastro
   S.conta=c;S.isOwner=!!(c&&c.isAdmin);
   if(contaConfirmada()){await Promise.all([carregarRede(),carregarMeus()]);if(S.isOwner)carregarAdmin()}
 }
@@ -805,9 +784,8 @@ async function initSupa(){
   S.mode="supa";S.contaOk=false;S.uid=null;S.conta=null;gate();$("#status").textContent="Conectando…";
   await carregarScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.1/dist/umd/supabase.js");
   sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  sb.auth.onAuthStateChange((ev,sess)=>{if(ev==="PASSWORD_RECOVERY"&&sess){S.uid=sess.user.id;S.conta=null;S.fluxo={tipo:"recuperar",etapa:"senha",uid:sess.user.id};S.contaOk=true;gate()}});
   const {data:{session},error}=await sb.auth.getSession();if(error)throw error;
-  if(session&&!(S.fluxo&&S.fluxo.tipo==="recuperar"))await entrarSupa(session.user.id);
+  if(session){S.sessWhats=whatsDoTel(session.user.phone);await entrarSupa(session.user.id)}
   S.auth="login";S.contaOk=true;$("#status").innerHTML="Online";renderAll();gate();
   track("app_aberto",{instalado:matchMedia("(display-mode: standalone)").matches,largura:innerWidth});
   setInterval(()=>{if(!document.hidden)atualizarRede()},6e4);
@@ -821,7 +799,7 @@ async function carregarAdmin(){
 }
 const ROT_EV={app_aberto:"Abriu o app",tela:"Abriu uma tela",cadastro_enviado:"Enviou cadastro",conta_confirmada:"Confirmou a conta",login:"Entrou",logout:"Saiu",
   posto_cadastrado:"Cadastrou posto",abastecimento_salvo:"Registrou abastecimento",mapa_posto_aberto:"Abriu posto no mapa",gps_aviso:"Ligou/desligou GPS",
-  gps_pergunta:"Recebeu “Vai abastecer?”",gps_resposta:"Respondeu “Vai abastecer?”",endereco_escolhido:"Usou busca de endereço",senha_link_pedido:"Pediu nova senha",senha_recuperada:"Criou nova senha",senha_alterada:"Alterou a senha"};
+  gps_pergunta:"Recebeu “Vai abastecer?”",gps_resposta:"Respondeu “Vai abastecer?”",endereco_escolhido:"Usou busca de endereço",codigo_pedido:"Pediu código no WhatsApp"};
 async function renderUso(forcar){
   if(!sb||!S.isOwner){$("#usoCard").hidden=true;return}
   $("#usoCard").hidden=false;
@@ -878,7 +856,7 @@ async function savePub(items,ids){const nome=primeiroNome();
   if(sb){const rows=items.filter(i=>!ids||ids.includes(i.id)).map(i=>({id:i.id,user_id:S.uid,nome,posto_id:i.postoId,comb:i.comb,preco:i.preco??null,modelo:i.modelo||null,km_l:i.kmL??null,estrelas:i.estrelas||null,obs:i.obs||null,avaliado_em:i.avaliadoEm||null,data:i.data}));
     const {error}=await sb.from("avaliacoes").upsert(rows);if(error)throw error;REDE.escritas++;S.pub={...S.pub,[S.uid]:items};S.pubNome={...S.pubNome,[S.uid]:nome};return}
   if(db)await db.doc("avaliacoes/"+S.uid).set({itens:items,nome});else{S.pub={...S.pub,[S.uid]:items};S.pubNome={...S.pubNome,[S.uid]:nome};lsSave()}}
-async function saveConta(c){if(sb){const {error}=await sb.from("profiles").upsert(perfilLinha(c));if(error)throw error;S.conta={...c,isAdmin:(S.conta||{}).isAdmin};lsSet(LS_COD+S.uid,c.codigo?{codigo:c.codigo,tentativas:c.tentativas||0}:null);return}if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
+async function saveConta(c){if(sb){const {error}=await sb.from("profiles").upsert(perfilLinha(c));if(error)throw error;S.conta={...c,isAdmin:(S.conta||{}).isAdmin};return}if(db)await db.doc("cadastros/"+S.uid).set(c);S.conta=c;lsSave()}
 const primeiroNome=()=>((S.conta&&S.conta.nome)||"").trim().split(/\s+/)[0]||"";
 
 async function init(){
@@ -934,7 +912,7 @@ function renderAlert(){
   const res=resumoIA[S.sel]||resumoSimples(st.its);
   $("#repAlert").innerHTML=suspBox(S.sel)+`<div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div><p class="note" style="color:inherit">${r.txt}</p>
     ${st.n?`<div class="summary" id="alSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="alIA" type="button">Resumir comentários com IA</button>':""}`:""}
-    ${Object.keys(st.precos).length?`<div class="note" style="color:inherit">Último preço relatado: ${Object.entries(st.precos).map(([c,v])=>`${esc(c)} ${brl(v.preco)}`).join(" · ")}</div>`:""}</div>`;
+    ${Object.keys(st.precos).length?`<div class="note" style="color:inherit">Último preço relatado: ${Object.entries(st.precos).map(([c,v])=>`${esc(c)} ${brlL(v.preco)}`).join(" · ")}</div>`:""}</div>`;
   const b=$("#alIA");if(b)b.onclick=()=>gerarResumo(S.sel,$("#alSum"),b);
 }
 function fillVeicSelect(){
@@ -950,8 +928,11 @@ function openVInline(manual){
   $("#vInlineTit").textContent=has?"Novo veículo":"Cadastre seu veículo para continuar";
   $("#viCancel").hidden=!has;
 }
+// placa sempre em caixa alta: converte enquanto digita e mantém só letras, números e hífen
+const fmtPlaca=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,8);
+["#vi-placa","#v-placa"].forEach(k=>$(k).addEventListener("input",e=>{const el=e.target,pos=el.selectionStart,novo=fmtPlaca(el.value);if(novo!==el.value){el.value=novo;try{el.setSelectionRange(pos,pos)}catch(x){}}}));
 async function addVeiculo(modelo,placa,comb){
-  const nv={id:"v"+Date.now(),modelo,placa:placa.toUpperCase(),comb};
+  const nv={id:"v"+Date.now(),modelo,placa:fmtPlaca(placa),comb};
   S.gar={...S.gar,veiculos:[...(S.gar.veiculos||[]),nv]};
   await saveGar();return nv;
 }
@@ -972,7 +953,7 @@ function updateRateCard(c){
   const has=!!c.last&&c.vid!=="__novo";
   $("#rateCard").hidden=!has;$("#primeiraVez").hidden=has||!c.vid||c.vid==="__novo";
   if(has){$("#rtNome").innerHTML=esc(c.last.postoNome)+suspTag(c.last.postoId);
-    $("#rtSub").textContent=`Abastecido em ${fdata(c.last.data)} · ${c.last.comb} a ${brl(c.last.preco)}/L`+(c.media?` · rendeu ${num(c.media)} km/l`:"");}
+    $("#rtSub").textContent=`Abastecido em ${fdata(c.last.data)} · ${c.last.comb} a ${brlL(c.last.preco)}/L`+(c.media?` · rendeu ${num(c.media)} km/l`:"");}
 }
 function updateCalc(){
   const c=calc();updateRateCard(c);
@@ -1020,9 +1001,9 @@ function renderDetail(id,rolar=true){
     ${susp(id).length?`<div class="susp-box"><strong>${ICO_ATENCAO}Suspeitas de fraude (${susp(id).length})</strong><p class="note">Relatos de motoristas, não verificados.</p></div>${relatosHtml(id)}`:""}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
       <div class="summary" id="detSum">${resumoHtml(res)}</div>${sample&&st.its.some(i=>i.obs)?'<button class="btn ghost small" id="detIA">Resumir comentários com IA</button>':""}</div>
-    ${Object.keys(st.precos).length?`<h3>Último preço relatado</h3><div class="prices">${Object.entries(st.precos).map(([c,v])=>`<div class="metric"><div class="k">${esc(c)}</div><div class="v">${brl(v.preco)}</div><div class="note">${fdata(v.data)}</div></div>`).join("")}</div>`:""}
+    ${Object.keys(st.precos).length?`<h3>Último preço relatado</h3><div class="prices">${Object.entries(st.precos).map(([c,v])=>`<div class="metric"><div class="k">${esc(c)}</div><div class="v">${brlL(v.preco)}</div><div class="note">${fdata(v.data)}</div></div>`).join("")}</div>`:""}
     ${kml.length?`<h3>Rendimento relatado</h3><div class="prices">${kml.map(i=>`<div class="metric"><div class="k">${esc(i.modelo||"Veículo")}</div><div class="v">${num(i.kmL)} km/l</div><div class="note">${esc(i.comb||"")}</div></div>`).join("")}</div>`:""}
-    <h3>Avaliações</h3>${reviews.length?reviews.map(i=>`<div class="review"><div class="row between">${starsHtml(i.estrelas)}<span class="meta">${esc(i.uid==="demo-u"?"Motorista exemplo":i.uid===S.uid?"Você":(S.pubNome[i.uid]||S.names[i.uid]||"Motorista"))} · ${fdata(i.avaliadoEm||i.data)}</span></div>${i.obs?`<div>${esc(i.obs)}</div>`:""}<div class="meta">${esc(i.comb||"")}${i.preco?" · "+brl(i.preco)+"/L":""}</div></div>`).join(""):'<p class="note">Sem avaliações ainda.</p>'}`;
+    <h3>Avaliações</h3>${reviews.length?reviews.map(i=>`<div class="review"><div class="row between">${starsHtml(i.estrelas)}<span class="meta">${esc(i.uid==="demo-u"?"Motorista exemplo":i.uid===S.uid?"Você":(S.pubNome[i.uid]||S.names[i.uid]||"Motorista"))} · ${fdata(i.avaliadoEm||i.data)}</span></div>${i.obs?`<div>${esc(i.obs)}</div>`:""}<div class="meta">${esc(i.comb||"")}${i.preco?" · "+brlL(i.preco)+"/L":""}</div></div>`).join(""):'<p class="note">Sem avaliações ainda.</p>'}`;
   $("#detClose").onclick=()=>{$("#detail").hidden=true;S.detail=null};
   const b=$("#detIA");if(b)b.onclick=()=>gerarResumo(id,$("#detSum"),b);
   if(rolar)$("#detail").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
@@ -1092,7 +1073,7 @@ function renderMapa(){
     carregarLeaflet().then(renderMapa,()=>{$("#mapMsg").textContent="Não foi possível carregar o mapa. Verifique a conexão com a internet."});
     return}
   if(!map)initMap();
-  const P=allPostos(),comb=combMapa(),c=S.gar.config||CFG_PADRAO,dados=postosComDados(),zoom=map.getZoom(),vis=map.getBounds().pad(.2);let semLoc=0,n=0,leves=0,anpFora=0;
+  const P=allPostos(),comb=combMapa(),c=cfgAlertas(),dados=postosComDados(),zoom=map.getZoom(),vis=map.getBounds().pad(.2);let semLoc=0,n=0,leves=0,anpFora=0;
   const vivos=new Set(),desenhar=(id,sig,criar)=>{vivos.add(id);const o=MK.get(id);if(o&&o.sig===sig)return;if(o)mkLayer.removeLayer(o.mk);MK.set(id,{sig,mk:criar().addTo(mkLayer)})};
   for(const [id,p] of Object.entries(P)){
     // posto da ANP ainda sem nenhuma informação da rede: bolinha leve (canvas), só na área visível
@@ -1107,7 +1088,7 @@ function renderMapa(){
     if(M.soComb&&!pr)continue;n++;
     // fora da área visível (com folga) o marcador não é desenhado: ele volta quando o mapa chegar até ele
     const sel=M.alvo===id;if(!sel&&!vis.contains(k))continue;
-    const html=`<div class="pin pin-${Regras.reputacao(st,c).cls}${sel?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brl(pr.preco):"sem preço"}</span></div>`,titulo=nomeP(id,p);
+    const html=`<div class="pin pin-${Regras.reputacao(st,c).cls}${sel?" sel":""}">${susp(id).length?'<span class="pw" title="Suspeita de fraude">!</span>':""}<span class="pv">${st.n?"★ "+num(st.media):"sem nota"}</span><span class="pp">${pr?brlL(pr.preco):"sem preço"}</span></div>`,titulo=nomeP(id,p);
     desenhar(id,html+"|"+titulo+"|"+k,()=>L.marker(k,{icon:L.divIcon({className:"pl-icon",html,iconSize:[0,0]}),title:titulo,zIndexOffset:sel?1000:0}).on("click",e=>{L.DomEvent.stopPropagation(e);track("mapa_posto_aberto",{exemplo:!!p.demo});abrirPosto(id)}));
   }
   for(const [id,o] of MK)if(!vivos.has(id)){mkLayer.removeLayer(o.mk);MK.delete(id)}
@@ -1123,7 +1104,7 @@ function abrirPosto(id){
   $("#sheetIn").innerHTML=`<div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div><h2>${esc(nomeP(id,p))} ${p.demo?'<span class="tag">Exemplo</span>':""}${suspTag(id)}</h2><p class="note">${esc(subP(id,p))}${M.me&&k?" · a "+fmtDist(distM(M.me,k)):""}</p></div><div class="row" style="flex-wrap:nowrap">${renBtn(id)}<button class="btn ghost small" id="shClose">Fechar</button></div></div>
     <div class="readout">
       <div class="metric hl"><div class="k">Nota</div><div class="v">${st.n?num(st.media):"—"}</div><div class="note">${st.n} avaliação(ões)</div></div>
-      <div class="metric"><div class="k">${esc(comb)}</div><div class="v">${pr?brl(pr.preco):"—"}</div><div class="note">${pr?"relatado em "+fdata(pr.data):"sem preço relatado"}</div></div>
+      <div class="metric"><div class="k">${esc(comb)}</div><div class="v">${pr?brlL(pr.preco):"—"}</div><div class="note">${pr?"relatado em "+fdata(pr.data):"sem preço relatado"}</div></div>
       <div class="metric"><div class="k">Rendimento</div><div class="v">${kml?num(kml)+" km/l":"—"}</div><div class="note">${kml?"com "+esc(comb):"sem dados"}</div></div>
     </div>
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
@@ -1208,7 +1189,7 @@ function perguntar(id,simulado){
   $("#gpsIn").innerHTML=`<h3><span class="pulse" style="background:var(--brand)"></span>${simulado?"Simulação: você parou num posto":"Você parou num posto"}</h3>
     <h2 id="gpsTit">Vai abastecer no ${esc(nomeP(id,p))}?</h2>${suspBox(id)}
     <div class="alert ${r.cls}"><div class="row between"><strong>${r.tit}</strong>${st.n?starsHtml(st.media):""}</div>
-      <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brl(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
+      <div class="note" style="color:inherit">${esc(comb)}${v?" ("+esc(v.modelo)+")":""}: <b>${pr?brlL(pr.preco)+"/L":"sem preço relatado"}</b>${pr?" · relatado em "+fdata(pr.data):""}</div>
       ${destaque.length?`<div class="summary">${destaque.map(([c,t,x])=>`<div class="${c}"><b>${t}</b>${esc(x)}</div>`).join("")}</div>`:""}</div>
     <div class="row"><button class="btn" id="gpsSim">Sim, vou abastecer</button><button class="btn ghost" id="gpsNao">Agora não</button></div>`;
   $("#gpsAsk").hidden=false;$("#gpsSim").focus();track("gps_pergunta",{simulado:!!simulado});
@@ -1226,6 +1207,10 @@ function consumoPorAbast(){
     if(p){if(a.km>p.km)rod[p.id]=a.km-p.km;if(a.media)med[p.id]=a.media}ult[a.veiculoId]=a});
   return {rod,med};
 }
+// cartão de abastecimento (Painel e Histórico): posto, selos, data/veículo/km, combustível/litros/preço, total, km/l e km rodados
+const TQ_CHEIO=`<span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`;
+function abCard(a,veics,med,rod){const vv=veics.find(x=>x.id===a.veiculoId),selos=suspTag(a.postoId)+(a.cheio?TQ_CHEIO:"");
+  return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div class="ab-main">${selos?`<div class="ab-selos">${selos}</div>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brlL(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r"><span class="ab-total">${brl(a.total)}</span>${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div><div class="ab-posto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><b class="ab-nome">${esc(a.postoNome||"Posto sem nome")}</b></div></div>`}
 function renderHist(){
   const v=S.gar.veiculos||[],sel=$("#hVeic"),cur=sel.value;
   sel.innerHTML='<option value="">Todos os veículos</option>'+v.map(x=>`<option value="${x.id}">${esc(x.modelo)}</option>`).join("");sel.value=v.some(x=>x.id===cur)?cur:"";
@@ -1238,8 +1223,7 @@ function renderHist(){
   const mediaG=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   $("#hKpis").innerHTML=`<div class="metric"><div class="k">Abastecimentos</div><div class="v">${list.length}</div></div><div class="metric"><div class="k">Total gasto</div><div class="v">${brl(gasto)}</div></div><div class="metric hl"><div class="k">Média geral</div><div class="v">${mediaG?num(mediaG)+" km/l":"—"}</div></div>`;
   const {rod,med}=consumoPorAbast();
-  $("#hist").innerHTML=list.length?list.map(a=>{const vv=v.find(x=>x.id===a.veiculoId);
-    return `<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div><b>${esc(a.postoNome)}</b>${suspTag(a.postoId)}${a.cheio?` <span class="tq"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="arco" d="M2.5 18a9.5 9.5 0 0 1 19 0"/><path class="marca" d="M5.3 11.3l1.4 1.4M12 8.5v1.3M18.7 11.3l-1.4 1.4"/><path class="bomba" d="M11 10.6h1.6a.4.4 0 0 1 .4.4v2.8h-2.4V11a.4.4 0 0 1 .4-.4zM11.2 11.2v1h1.2v-1z"/><path class="mangueira" d="M13 11.4l.8.7v1.4M10.3 14h3"/><path class="ponteiro" d="M12 18l7.4-3.2"/><circle cx="12" cy="18" r="1.6"/></svg>Cheio</span>`:""}<div class="s">${fdata(a.data)} · <span class="dest">${esc(vv?vv.modelo:"Veículo removido")}</span> · ${a.km.toLocaleString("pt-BR")} km</div><div class="s"><span class="dest">${esc(a.comb)}</span> · ${num(a.litros,2)} L a ${brl(a.preco)}${a.estrelas?" · "+starsHtml(a.estrelas):""}</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}${rod[a.id]?`<div class="s">${rod[a.id].toLocaleString("pt-BR")} km total</div>`:""}</div></div>`}).join("")
+  $("#hist").innerHTML=list.length?list.map(a=>abCard(a,v,med,rod)).join("")
     :S.mine.length?'<div class="empty card"><span>Nenhum abastecimento neste período.</span><span class="note">Escolha outro período ou outro veículo.</span></div>'
     :'<div class="empty card"><span>Nenhum abastecimento registrado.</span><span class="note">Use a aba Abastecer quando parar no posto.</span></div>';
 }
@@ -1248,8 +1232,8 @@ function renderHist(){
 function renderGaragem(){renderConta();renderAdmin();
   const v=S.gar.veiculos||[];
   $("#veicList").innerHTML=v.length?v.map(x=>`<div class="veic"><div><b>${esc(x.modelo)}</b> ${x.placa?`<span class="plate-sm">${esc(x.placa)}</span>`:""}<div class="note">${esc(x.comb||"")}</div></div><button class="btn ghost small" data-rm="${x.id}">Remover</button></div>`).join(""):'<p class="note">Nenhum veículo ainda. Toque em “Adicionar veículo” para cadastrar o primeiro.</p>';
-  const c=S.gar.config||CFG_PADRAO;
-  if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=c.baixo;$("#c-alto").value=c.alto;$("#c-min").value=c.min}
+  const c=cfgAlertas();
+  if(document.activeElement?.closest?.(".card")?.contains($("#c-baixo"))!==true){$("#c-baixo").value=String(meioPonto(c.baixo));$("#c-alto").value=String(meioPonto(c.alto));$("#c-min").value=c.min}
 }
 
 /* Desenho por aba: renderAll marca as abas pesadas como desatualizadas e desenha só a que está à vista; as
@@ -1277,21 +1261,27 @@ document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dat
 /* ---------- PAINEL ---------- */
 const IC={bomba:'<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 8h5M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/>',gota:'<circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-3.5"/>',estrela:'<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',sobe:'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>'};
 function renderPainel(){
-  const ab=S.mine,v=S.gar.veiculos||[];
+  const v=S.gar.veiculos||[],sel=$("#pVeicSel"),cur=sel.value,multi=v.length>1;
+  // filtro por veículo: só aparece com 2 ou mais veículos cadastrados
+  $("#pFiltro").hidden=!multi;
+  sel.innerHTML='<option value="">Todos os veículos</option>'+v.map(x=>`<option value="${x.id}">${esc(x.modelo)}</option>`).join("");
+  sel.value=multi&&v.some(x=>x.id===cur)?cur:"";
+  const fv=sel.value,ab=fv?S.mine.filter(a=>a.veiculoId===fv):S.mine;
   $("#pVeic").hidden=v.length>0;
   const litros=ab.reduce((s,a)=>s+(a.litros||0),0),nts=ab.filter(a=>a.estrelas),meds=ab.filter(a=>a.media);
   const nota=nts.length?nts.reduce((s,a)=>s+a.estrelas,0)/nts.length:null,cons=meds.length?meds.reduce((s,a)=>s+a.media,0)/meds.length:null;
   const st=(ic,k,val,un)=>`<div class="stat"><div class="k"><svg viewBox="0 0 24 24">${IC[ic]}</svg>${k}</div><div class="v">${val}${un&&val!=="—"?`<small>${un}</small>`:""}</div></div>`;
   $("#pStats").innerHTML=st("bomba","Abastecimentos",ab.length)+st("gota","Litros totais",ab.length?num(litros,1):"—","L")+st("estrela","Nota média",nota?num(nota,1):"—","/5")+st("sobe","Consumo médio",cons?num(cons,1):"—","km/L");
-  const pend=v.map(x=>({x,a:lastAbast(x.id)})).filter(o=>o.a);
+  const pend=v.filter(x=>!fv||x.id===fv).map(x=>({x,a:lastAbast(x.id)})).filter(o=>o.a);
   $("#pPend").innerHTML=pend.map(({x,a})=>`<div class="card pend"><h3>Aguardando avaliação</h3><div class="t">${esc(a.postoNome)} — ${esc(a.comb)}${suspTag(a.postoId)}</div><p class="note">${v.length>1?esc(x.modelo)+" · ":""}Avalie no próximo abastecimento para calcular consumo e qualidade.</p></div>`).join("");
   const ult=[...ab].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,3);
-  const {med}=consumoPorAbast();
-  $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>`<div class="ab" data-ab="${a.id}" role="button" tabindex="0" title="Editar abastecimento"><div><b>${esc(a.postoNome)}</b>${suspTag(a.postoId)}<div class="s">${fdata(a.data)} · ${esc(a.comb)} · ${num(a.litros,2)} L</div></div><div class="r">${brl(a.total)}${med[a.id]?`<div class="s">${num(med[a.id])} km/l</div>`:""}</div></div>`).join("")
+  const {rod,med}=consumoPorAbast();
+  $("#pUlt").innerHTML=ult.length?`<div class="secthead"><h3>Últimos abastecimentos</h3><button class="btn ghost small" type="button" data-go="historico">Ver todos</button></div>`+ult.map(a=>abCard(a,v,med,rod)).join("")
     :'<div class="empty card"><span>Nenhum abastecimento ainda.</span><span class="note">Toque em “Novo abastecimento” quando parar no posto.</span></div>';
 }
 $("#pVeic").onclick=()=>{show("garagem");$("#vAddBtn").click()};
 $("#pNovo").onclick=()=>show("abastecer");
+$("#pVeicSel").onchange=()=>{renderPainel();$("#hVeic").value=$("#pVeicSel").value;renderHist()}; // "Ver todos" abre o Histórico no mesmo veículo
 $("#pRank").onclick=()=>show("rede");
 $("#pUlt").onclick=e=>{const b=e.target.closest("[data-go]");if(b){show(b.dataset.go);return}const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
 $("#hist").onclick=e=>{const r=e.target.closest("[data-ab]");if(r)abrirEdicao(r.dataset.ab)};
@@ -1444,8 +1434,9 @@ $("#viSave").onclick=async()=>{
 $("#viCancel").onclick=()=>{$("#vInline").hidden=true;delete $("#vInline").dataset.manual;const v=S.gar.veiculos||[];if(v[0])$("#veiculo").value=v[0].id;prefillVeic();updateCalc()};
 /* valores com vírgula automática: os dígitos entram pela direita (459 → 4,59) */
 const parseBR=v=>{v=String(v||"").replace(/\./g,"").replace(",",".");const n=parseFloat(v);return isNaN(n)||n<=0?null:n};
-const fmtBR=n=>n==null?"":n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-function maskMoney(el){const d=el.value.replace(/\D/g,"").replace(/^0+/,"").slice(0,9);el.value=d?fmtBR(parseInt(d,10)/100):""}
+const fmtBR=(n,c=2)=>n==null?"":n.toLocaleString("pt-BR",{minimumFractionDigits:c,maximumFractionDigits:c});
+const casasDe=el=>el.id==="preco"||el.id==="ed-preco"?3:2; // valor do litro com 3 casas
+function maskMoney(el){const c=casasDe(el),d=el.value.replace(/\D/g,"").replace(/^0+/,"").slice(0,9);el.value=d?fmtBR(parseInt(d,10)/10**c,c):""}
 // Com o valor do litro preenchido: digitou o total, calcula os litros; digitou os litros, calcula o total.
 let ultimoDigitado=null; // "litros" ou "total"
 function autoFill(changed){
@@ -1560,9 +1551,9 @@ function vizinhos(a){const seq=S.mine.filter(x=>x.veiculoId===a.veiculoId).sort(
 function abrirEdicao(abId){
   const a=S.mine.find(x=>x.id===abId);if(!a)return;S.edAb=abId;
   const v=(S.gar.veiculos||[]).find(x=>x.id===a.veiculoId);
-  $("#abEdPosto").textContent=[a.postoNome,v?v.modelo:"",fdata(a.data)].filter(Boolean).join(" · ");
+  $("#abEdPosto").textContent=[v?v.modelo:"",fdata(a.data)].filter(Boolean).join(" · ");$("#abEdPostoNome").textContent=a.postoNome||"Posto sem nome";
   $("#ed-comb").innerHTML=[...new Set([...COMBS,a.comb].filter(Boolean))].map(c=>`<option>${esc(c)}</option>`).join("");$("#ed-comb").value=a.comb;
-  $("#ed-data").value=isoDia(a.data);$("#ed-km").value=a.km;$("#ed-preco").value=fmtBR(a.preco);$("#ed-litros").value=fmtBR(a.litros);$("#ed-total").value=fmtBR(a.total);$("#ed-cheio").checked=!!a.cheio;
+  $("#ed-data").value=isoDia(a.data);$("#ed-km").value=a.km;$("#ed-preco").value=fmtBR(a.preco,3);$("#ed-litros").value=fmtBR(a.litros);$("#ed-total").value=fmtBR(a.total);$("#ed-cheio").checked=!!a.cheio;
   S.edSusp=undefined;pintaEdSusp();
   $("#abEdit").hidden=false;$("#ed-km").focus();
 }
@@ -1618,64 +1609,48 @@ $("#veicList").onclick=async e=>{const b=e.target.closest("[data-rm]");if(!b)ret
   if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Confirmar remoção";b.classList.remove("ghost");return}
   S.gar={...S.gar,veiculos:S.gar.veiculos.filter(x=>x.id!==b.dataset.rm)};try{await saveGar();toast("Veículo removido");renderAll()}catch(err){toast("Não foi possível remover")}};
 $("#saveCfg").onclick=async()=>{const n=k=>parseFloat($(k).value);
-  const cfg={...(S.gar.config||{}),baixo:n("#c-baixo")||CFG_PADRAO.baixo,alto:n("#c-alto")||CFG_PADRAO.alto,min:Math.max(1,Math.round(n("#c-min")||CFG_PADRAO.min))};
+  const cfg={...(S.gar.config||{}),baixo:meioPonto(n("#c-baixo")||CFG_PADRAO.baixo),alto:meioPonto(n("#c-alto")||CFG_PADRAO.alto),min:Math.max(1,Math.round(n("#c-min")||CFG_PADRAO.min))};
   if(cfg.baixo>=cfg.alto){toast("A nota de “péssimo” precisa ser menor que a de “ótimo”");return}
   S.gar={...S.gar,config:cfg};try{await saveGar();toast("Alertas salvos");renderAll()}catch(err){toast("Não foi possível salvar")}};
 
+document.querySelectorAll(".notaSel").forEach(sel=>sel.innerHTML=Array.from({length:9},(_,i)=>1+i/2).map(v=>`<option value="${v}">${v.toLocaleString("pt-BR",{minimumFractionDigits:1})} ★</option>`).join(""));
 $("#comb").innerHTML=$("#v-comb").innerHTML=$("#vi-comb").innerHTML=$("#mComb").innerHTML=COMBS.map(c=>`<option>${c}</option>`).join("");
 try{const t=localStorage.getItem(LS+"-tab");if(t&&document.getElementById("v-"+t))show(t)}catch(e){}
 /* ---------- CONTA / CADASTRO ---------- */
-const soDig=Regras.soDig,cpfOk=Regras.cpfValido;
-const fmtCpf=c=>{c=soDig(c).slice(0,11);if(c.length<=3)return c;if(c.length<=6)return c.slice(0,3)+"."+c.slice(3);if(c.length<=9)return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6);return c.slice(0,3)+"."+c.slice(3,6)+"."+c.slice(6,9)+"-"+c.slice(9)};
+/* Conta = nome + celular com WhatsApp. Não há CPF, e-mail nem senha: todo acesso é confirmado
+   por um código de 6 dígitos enviado ao WhatsApp.
+   - modo local: o código é simulado (aparece na tela);
+   - online: Supabase Auth por telefone (signInWithOtp, canal WhatsApp — precisa do provedor
+     Phone/Twilio ligado no painel do Supabase). */
+const soDig=Regras.soDig;
 const fmtWhats=w=>{w=soDig(w).slice(0,11);if(w.length<3)return w;const r=w.slice(2);return `(${w.slice(0,2)}) `+(w.length>10?r.slice(0,5)+"-"+r.slice(5):r.length>4?r.slice(0,4)+"-"+r.slice(4):r)};
-const mascCpf=c=>{c=soDig(c);return c.length===11?`***.${c.slice(3,6)}.${c.slice(6,9)}-**`:"—"};
+const whatsOk=Regras.whatsValido;
+const telDoWhats=w=>"+55"+soDig(w); // formato E.164 do Supabase Auth
+const whatsDoTel=t=>{t=soDig(t);return t.length===13&&t.startsWith("55")?t.slice(2):t};
+const ERRO_WHATS="Celular inválido. Use DDD + celular, ex.: (11) 98765-4321.";
 const contaConfirmada=()=>!!(S.conta&&S.conta.status==="confirmado");
 const novoCodigo=()=>String(Math.floor(100000+Math.random()*900000));
-function fillCadForm(c){$("#cd-nome").value=c.nome||"";$("#cd-cpf").value=fmtCpf(c.cpf);$("#cd-email").value=c.email||"";$("#cd-whats").value=fmtWhats(c.whats);$("#cd-lgpd").checked=!!c.lgpdEm}
-/* senha: SHA-256 com sal, repetido 3.000 vezes. No app real a senha fica no servidor (Supabase Auth / bcrypt). */
-function sha256(str){
-  const bytes=new TextEncoder().encode(str),rr=(v,n)=>(v>>>n)|(v<<(32-n)),H=[],K=[],comp={};
-  for(let c=2,i=0;i<64;c++){if(!comp[c]){for(let j=c*c;j<313;j+=c)comp[j]=1;if(i<8)H[i]=(Math.pow(c,.5)*2**32)|0;K[i++]=(Math.pow(c,1/3)*2**32)|0}}
-  const l=bytes.length,w=new Uint8Array(((l+9+63)>>6)<<6);w.set(bytes);w[l]=0x80;
-  const dv=new DataView(w.buffer);dv.setUint32(w.length-4,(l*8)>>>0);dv.setUint32(w.length-8,Math.floor(l*8/2**32));
-  let h=H.slice();const W=new Array(64);
-  for(let o=0;o<w.length;o+=64){
-    for(let t=0;t<16;t++)W[t]=dv.getUint32(o+t*4)|0;
-    for(let t=16;t<64;t++){const a=W[t-15],b=W[t-2];W[t]=((rr(a,7)^rr(a,18)^(a>>>3))+W[t-16]+(rr(b,17)^rr(b,19)^(b>>>10))+W[t-7])|0}
-    let [A,B,C,D,E,F,G,X]=h;
-    for(let t=0;t<64;t++){
-      const t1=(X+(rr(E,6)^rr(E,11)^rr(E,25))+((E&F)^(~E&G))+K[t]+W[t])|0,t2=((rr(A,2)^rr(A,13)^rr(A,22))+((A&B)^(A&C)^(B&C)))|0;
-      X=G;G=F;F=E;E=(D+t1)|0;D=C;C=B;B=A;A=(t1+t2)|0;
-    }
-    h=[A,B,C,D,E,F,G,X].map((x,i)=>(x+h[i])|0);
-  }
-  return h.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");
-}
-function hashSenha(senha,sal){let h=sal+":"+senha;for(let i=0;i<3000;i++)h=sha256(sal+h);return h}
-function novaSenha(senha){const sal=[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,"0")).join("");return {sal,hash:hashSenha(senha,sal)}}
-const senhaConfere=(c,senha)=>!!(c.senha&&hashSenha(senha,c.senha.sal)===c.senha.hash);
-const senhaErro=Regras.senhaErro;
+function fillCadForm(c){$("#cd-nome").value=c.nome||"";$("#cd-whats").value=fmtWhats(c.whats);$("#cd-lgpd").checked=!!c.lgpdEm}
 const whatsMasc=w=>{w=soDig(w);return w.length===11?`(${w.slice(0,2)}) *****-${w.slice(7)}`:fmtWhats(w)};
-function acharConta(v){
-  v=String(v||"").trim();const email=v.includes("@")?v.toLowerCase():null,cpf=soDig(v);
-  return Object.keys(CONTAS).find(id=>email?CONTAS[id].email===email:cpf.length===11&&CONTAS[id].cpf===cpf)||null;
-}
-function showCad(step){ // loading | login | esqueci | senha | form | code
+const acharConta=w=>{w=soDig(w);return w.length===11?Object.keys(CONTAS).find(id=>soDig(CONTAS[id].whats)===w)||null:null};
+function showCad(step){ // loading | login | form | code
   document.querySelectorAll("section.view[id^=v-]").forEach(s=>s.hidden=s.id!=="v-cadastro");
   $("#sheet").hidden=true;if(!contaConfirmada())$("#gpsAsk").hidden=true;
-  const ids={loading:"#cadLoading",login:"#loginForm",esqueci:"#esqForm",senha:"#senhaForm",form:"#cadForm",code:"#cadCode"};
+  const ids={loading:"#cadLoading",login:"#loginForm",form:"#cadForm",code:"#cadCode"};
   for(const [k,sel] of Object.entries(ids))$(sel).hidden=k!==step;
 }
 function prepCode(){
-  const f=S.fluxo,local=comLogin();
+  const f=S.fluxo;
   if(f){
-    $("#codeMsg").innerHTML=`Para ${f.tipo==="login"?"entrar":"criar uma nova senha"}, digite o código que enviamos para o WhatsApp <b>${esc(whatsMasc(f.whats))}</b>.`;
-    $("#codeDemo").textContent=f.codigo;$("#codeBtn").textContent=f.tipo==="login"?"Entrar":"Continuar";$("#codeFix").hidden=true;
+    $("#codeMsg").innerHTML=`Para ${f.tipo==="login"?"entrar":"criar sua conta"}, digite o código que enviamos para o WhatsApp <b>${esc(f.tipo==="login"?whatsMasc(f.whats):fmtWhats(f.whats))}</b>.`;
+    $("#codeBtn").textContent=f.tipo==="login"?"Entrar":"Confirmar conta";$("#codeFix").hidden=f.tipo==="login";
   }else{
     $("#codeMsg").innerHTML=`Enviamos um código de 6 dígitos para o WhatsApp <b>${esc(fmtWhats(S.conta.whats))}</b>.`;
-    $("#codeDemo").textContent=S.conta.codigo||"";$("#codeBtn").textContent="Confirmar conta";$("#codeFix").hidden=false;
+    $("#codeBtn").textContent="Confirmar número";$("#codeFix").hidden=false;
   }
-  $("#codeVoltar").hidden=!local;
+  const demo=f?f.codigo:S.conta.codigo; // online o código chega de verdade e não fica no aparelho
+  $("#codeDemoBox").hidden=!demo;$("#codeDemo").textContent=demo||"";
+  $("#codeVoltar").hidden=!comLogin();
 }
 function gate(){
   const ok=contaConfirmada();
@@ -1684,158 +1659,123 @@ function gate(){
   if(S.editando)return;
   if(!ok){
     if(!S.contaOk){showCad("loading");return}
-    if(S.fluxo){if(S.fluxo.etapa==="senha")showCad("senha");else{prepCode();showCad("code")}return}
+    if(S.fluxo){prepCode();showCad("code");return}
     if(S.conta&&S.conta.status==="pendente"){prepCode();showCad("code");return}
     const completar=!!(sb&&S.uid&&!S.conta);
-    if(comLogin()&&S.auth!=="cadastro"&&!completar){
-      if(S.auth==="esqueci")$("#eqIntro").textContent=sb?"Informe seu CPF ou e-mail. Vamos enviar um link para o e-mail da conta para você criar uma nova senha.":"Informe seu CPF ou e-mail. Vamos enviar um código para o WhatsApp cadastrado na conta.";
-      showCad(S.auth==="esqueci"?"esqueci":"login");return}
+    if(comLogin()&&S.auth!=="cadastro"&&!completar){showCad("login");return}
     $("#cadTit").textContent=completar?"Complete seu cadastro":"Crie sua conta";$("#cadCancel").hidden=true;
-    $("#cadSenhas").hidden=!comLogin()||completar;$("#cadEntrar").hidden=!comLogin()||completar;showCad("form");
+    if(completar){$("#cd-whats").value=fmtWhats(S.sessWhats);$("#cd-whats").readOnly=true}
+    $("#cadEntrar").hidden=!comLogin()||completar;showCad("form");
   }else if(!$("#v-cadastro").hidden){show(S.pendTab||"painel")}
 }
-function irPara(auth){S.auth=auth;S.fluxo=null;["#lgErr","#eqErr","#nsErr","#cadErr","#codeErr"].forEach(x=>$(x).textContent="");gate()}
+function irPara(auth){S.auth=auth;S.fluxo=null;["#lgErr","#cadErr","#codeErr"].forEach(x=>$(x).textContent="");gate()}
 async function sair(msg){
   if(sb){track("logout");try{await sb.auth.signOut()}catch(e){}}
-  lsSet(LS_2FA,null);
-  S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="painel";S.isOwner=false;S.usuarios=[];
+  S.fluxo=null;S.editando=false;S.sel=null;S.pendTab="painel";S.isOwner=false;S.usuarios=[];S.sessWhats=null;
   if(sb){S.uid=null;S.conta=null;S.mine=[];S.gar=garPadrao();S.postos={};S.pub={};S.susp={};S.pubNome={};zerarRede()}else entrarLocal(null);
-  fillCadForm({});["#lg-senha","#cd-senha","#cd-senha2","#cd-code"].forEach(x=>$(x).value="");
+  fillCadForm({});$("#cd-whats").readOnly=false;$("#cd-code").value="";
   if(msg)toast(msg);S.auth="login";renderAll();gate();
 }
 const sairLocal=sair;
 function editarConta(fromGaragem){
   S.editando=true;fillCadForm(S.conta||{});$("#cadErr").textContent="";
-  $("#cd-email").readOnly=!!sb; // no banco online o e-mail é o login; troca de e-mail fica para depois
+  $("#cd-whats").readOnly=!!sb; // online o número é o login; trocar de número fica para depois
+  $("#cdWhatsNota").textContent=sb?"O número é o seu login e não pode ser trocado por aqui.":"Se trocar o número, será preciso confirmar o novo pelo WhatsApp.";
   $("#cadTit").textContent=fromGaragem?"Alterar dados":"Corrija seus dados";$("#cadCancel").hidden=false;
-  $("#cadSenhas").hidden=$("#cadEntrar").hidden=true;showCad("form");
+  $("#cadEntrar").hidden=true;showCad("form");
 }
-document.querySelectorAll(".verSenha").forEach(cb=>cb.onchange=()=>cb.closest("form").querySelectorAll("input[type=password],input[data-senha]").forEach(i=>{i.dataset.senha=1;i.type=cb.checked?"text":"password"}));
-$("#cd-cpf").oninput=e=>e.target.value=fmtCpf(e.target.value);
-$("#cd-whats").oninput=e=>e.target.value=fmtWhats(e.target.value);
+$("#cd-whats").oninput=$("#lg-whats").oninput=e=>e.target.value=fmtWhats(e.target.value);
 $("#cd-code").oninput=e=>e.target.value=soDig(e.target.value).slice(0,6);
-$("#lg-id").oninput=$("#eq-id").oninput=e=>{const v=e.target.value;if(/^[\d.\-]+$/.test(v))e.target.value=fmtCpf(v)};
-$("#lgCriar").onclick=()=>{fillCadForm({});$("#cd-email").readOnly=false;$("#cd-senha").value=$("#cd-senha2").value="";irPara("cadastro")};
-$("#cadEntrar").onclick=()=>irPara("login");
-$("#lgEsqueci").onclick=()=>{$("#eq-id").value=$("#lg-id").value;$("#eqOk").textContent="";irPara("esqueci")};
-$("#eqVoltar").onclick=()=>irPara("login");
-$("#codeVoltar").onclick=()=>{if(S.fluxo&&!sb)irPara("login");else sair()};
-const emailMasc=e=>{const [u,d]=String(e||"").split("@");return d?u.slice(0,2)+"***@"+d:e};
-async function emailDoLogin(idv){const {data,error}=await sb.rpc("email_do_login",{ident:idv});if(error)throw error;return data}
+const NOTA_WHATS="É com este número que você entra no app: a cada acesso enviamos um código para ele.";
+$("#lgCriar").onclick=()=>{fillCadForm({whats:$("#lg-whats").value});$("#cd-whats").readOnly=false;$("#cdWhatsNota").textContent=NOTA_WHATS;irPara("cadastro")};
+$("#cadEntrar").onclick=()=>{$("#lg-whats").value=$("#cd-whats").value;irPara("login")};
+$("#codeVoltar").onclick=()=>{if(S.fluxo)irPara(S.fluxo.tipo==="login"?"login":"cadastro");else sair()};
+async function whatsEmUso(w){const {data,error}=await sb.rpc("whats_em_uso",{p_whats:soDig(w)});if(error)throw error;return !!data}
+// online: pede ao Supabase Auth o código pelo WhatsApp (cria o usuário só no cadastro)
+async function pedirCodigoSupa(w,criar){
+  const {error}=await sb.auth.signInWithOtp({phone:telDoWhats(w),options:{channel:"whatsapp",shouldCreateUser:criar}});
+  if(error)throw new Error(/rate|seconds|many/i.test(error.message)?"Aguarde um pouco antes de pedir outro código.":/provider|phone|sms|twilio/i.test(error.message)?"Envio pelo WhatsApp ainda não configurado no servidor.":error.message);
+  track("codigo_pedido",{tipo:criar?"cadastro":"login"});
+}
 $("#loginForm").onsubmit=async e=>{
-  e.preventDefault();const idv=$("#lg-id").value.trim(),senha=$("#lg-senha").value,err=$("#lgErr");
-  if(!idv||!senha){err.textContent="Informe o CPF ou e-mail e a senha.";return}
+  e.preventDefault();const whats=soDig($("#lg-whats").value),err=$("#lgErr");
+  if(!whatsOk(whats)){err.textContent=ERRO_WHATS;return}
   if(sb){
-    err.textContent="Entrando…";
+    err.textContent="Enviando código…";
     try{
-      const email=await emailDoLogin(idv);
-      if(!email){err.textContent="Não encontramos conta com este CPF ou e-mail.";return}
-      const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
-      if(error){err.textContent=/invalid/i.test(error.message)?"Senha incorreta.":/rate|many|seconds/i.test(error.message)?"Muitas tentativas. Aguarde alguns minutos e tente de novo.":"Não foi possível entrar: "+error.message;return}
-      const uid=data.user.id,c=await carregarPerfil(uid);
-      err.textContent="";$("#lg-senha").value="";
-      if(!c||c.status!=="confirmado"){await entrarSupa(uid);renderAll();gate();return}
-      S.uid=uid;S.conta=null;S.fluxo={tipo:"login",uid,whats:c.whats,codigo:novoCodigo(),tentativas:0};lsSet(LS_2FA,S.fluxo);
-      $("#cd-code").value="";$("#codeErr").textContent="";toast("Código enviado para o WhatsApp");gate();
-    }catch(x){err.textContent="Sem conexão com o servidor. Tente de novo."}
-    return}
-  const uid=acharConta(idv);if(!uid){err.textContent="Não encontramos conta com este CPF ou e-mail.";return}
-  const c=CONTAS[uid],agora=Date.now();
-  if(c.bloqueadoAte>agora){err.textContent=`Muitas tentativas erradas. Tente de novo em ${Math.ceil((c.bloqueadoAte-agora)/6e4)} min ou use “Esqueci minha senha”.`;return}
-  if(!c.senha){err.textContent="Esta conta ainda não tem senha. Use “Esqueci minha senha” para criar uma.";return}
-  if(!senhaConfere(c,senha)){
-    c.erros=(c.erros||0)+1;
-    if(c.erros>=5){c.erros=0;c.bloqueadoAte=agora+5*6e4;err.textContent="Senha incorreta. Por segurança, a conta ficou bloqueada por 5 minutos."}
-    else err.textContent=`Senha incorreta. Restam ${5-c.erros} tentativas.`;
-    lsSet(LS_CONTAS,CONTAS);return}
-  c.erros=0;delete c.bloqueadoAte;lsSet(LS_CONTAS,CONTAS);err.textContent="";$("#lg-senha").value="";
-  if(c.status!=="confirmado"){entrarLocal(uid);renderAll();gate();return}
+      if(!await whatsEmUso(whats)){err.textContent="Não encontramos conta com este celular. Toque em “Criar conta”.";return}
+      await pedirCodigoSupa(whats,false);
+    }catch(x){err.textContent=x.message&&!/fetch|network/i.test(x.message)?x.message:"Sem conexão com o servidor. Tente de novo.";return}
+    err.textContent="";S.fluxo={tipo:"login",whats,tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
+    toast("Código enviado para o WhatsApp");gate();return}
+  const uid=acharConta(whats);if(!uid){err.textContent="Não encontramos conta com este celular. Toque em “Criar conta”.";return}
+  const c=CONTAS[uid];err.textContent="";
+  if(c.status!=="confirmado"){entrarLocal(uid);renderAll();gate();return} // cadastro sem confirmar: segue na confirmação
   S.fluxo={tipo:"login",uid,whats:c.whats,codigo:novoCodigo(),tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
   toast("Código enviado para o WhatsApp");gate();
 };
-$("#esqForm").onsubmit=async e=>{
-  e.preventDefault();const idv=$("#eq-id").value.trim();$("#eqOk").textContent="";
-  if(sb){
-    $("#eqErr").textContent="Enviando…";
-    try{
-      const email=await emailDoLogin(idv);
-      if(!email){$("#eqErr").textContent="Não encontramos conta com este CPF ou e-mail.";return}
-      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-      if(error){$("#eqErr").textContent=/rate|seconds/i.test(error.message)?"Aguarde um pouco antes de pedir outro link.":"Não foi possível enviar: "+error.message;return}
-      $("#eqErr").textContent="";$("#eqOk").textContent=`Enviamos um link para ${emailMasc(email)}. Abra o e-mail neste aparelho e toque no link para criar a nova senha.`;track("senha_link_pedido");
-    }catch(x){$("#eqErr").textContent="Sem conexão com o servidor. Tente de novo."}
-    return}
-  const uid=acharConta(idv);
-  if(!uid){$("#eqErr").textContent="Não encontramos conta com este CPF ou e-mail.";return}
-  $("#eqErr").textContent="";S.fluxo={tipo:"recuperar",uid,whats:CONTAS[uid].whats,codigo:novoCodigo(),tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
-  toast("Código enviado para o WhatsApp");gate();
-};
-$("#senhaForm").onsubmit=async e=>{
-  e.preventDefault();const a=$("#ns-senha").value,b=$("#ns-senha2").value,erro=senhaErro(a,b);
-  $("#nsErr").textContent=erro;if(erro)return;
-  const uid=S.fluxo.uid;
-  if(sb){
-    const {error}=await sb.auth.updateUser({password:a});
-    if(error){$("#nsErr").textContent=/same|different/i.test(error.message)?"A nova senha precisa ser diferente da anterior.":"Não foi possível salvar: "+error.message;return}
-    S.fluxo=null;$("#ns-senha").value=$("#ns-senha2").value="";history.replaceState(null,"",location.pathname);
-    await entrarSupa(uid);renderAll();track("senha_recuperada");toast(`Senha criada. Bem-vindo, ${primeiroNome()}!`);gate();return}
-  const c=CONTAS[uid];
-  c.senha=novaSenha(a);c.erros=0;delete c.bloqueadoAte;
-  // o código no WhatsApp comprovou o número: uma conta pendente fica confirmada
-  if(c.status!=="confirmado"){c.status="confirmado";c.confirmadoEm=new Date().toISOString();delete c.codigo;delete c.tentativas}
-  lsSet(LS_CONTAS,CONTAS);S.fluxo=null;$("#ns-senha").value=$("#ns-senha2").value="";
-  entrarLocal(uid);renderAll();toast(`Senha criada. Bem-vindo, ${primeiroNome()}!`);gate();
-};
 $("#cadForm").onsubmit=async e=>{
   e.preventDefault();
-  const nome=$("#cd-nome").value.trim().replace(/\s+/g," "),cpf=soDig($("#cd-cpf").value),email=$("#cd-email").value.trim().toLowerCase(),whats=soDig($("#cd-whats").value);
+  const nome=$("#cd-nome").value.trim().replace(/\s+/g," "),whats=soDig($("#cd-whats").value);
   const nova=comLogin()&&!S.editando,completar=!!(sb&&S.uid&&!S.conta),outro=id=>id&&id!==S.uid;
-  let erro=nome.split(" ").length<2?"Informe nome e sobrenome.":!cpfOk(cpf)?"CPF inválido. Confira os números.":!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)?"E-mail inválido.":
-    !Regras.whatsValido(whats)?"WhatsApp inválido. Use DDD + celular, ex.: (11) 98765-4321.":"";
-  if(!erro&&S.mode==="local"&&outro(acharConta(cpf)))erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
-  if(!erro&&S.mode==="local"&&outro(acharConta(email)))erro="Já existe uma conta com este e-mail.";
-  if(!erro&&nova&&!completar)erro=senhaErro($("#cd-senha").value,$("#cd-senha2").value);
+  let erro=nome.split(" ").length<2?"Informe nome e sobrenome.":!whatsOk(whats)?ERRO_WHATS:"";
+  if(!erro&&S.mode==="local"&&outro(acharConta(whats)))erro="Já existe uma conta com este celular. Toque em “Já tenho conta” para entrar.";
   if(!erro&&!$("#cd-lgpd").checked)erro="Marque a concordância com o uso dos dados.";
-  if(!erro&&sb){
+  if(!erro&&sb&&nova&&!completar){
     $("#cadErr").textContent="Verificando…";
-    try{const {data}=await sb.rpc("cadastro_em_uso",{p_cpf:cpf,p_email:email});
-      if(data==="cpf")erro="Já existe uma conta com este CPF. Entre com sua senha ou use “Esqueci minha senha”.";
-      else if(data==="email")erro="Já existe uma conta com este e-mail.";
-    }catch(x){erro="Sem conexão com o servidor. Tente de novo."}
+    try{if(await whatsEmUso(whats))erro="Já existe uma conta com este celular. Toque em “Já tenho conta” para entrar."}
+    catch(x){erro="Sem conexão com o servidor. Tente de novo."}
   }
   $("#cadErr").textContent=erro;if(erro)return;
-  if(nova&&sb&&!S.uid){
-    $("#cadErr").textContent="Criando conta…";
-    const {data,error}=await sb.auth.signUp({email,password:$("#cd-senha").value});
-    if(error){$("#cadErr").textContent=/registered|exists/i.test(error.message)?"Este e-mail já tem conta. Entre com sua senha.":/rate|seconds/i.test(error.message)?"Muitas tentativas. Aguarde um pouco e tente de novo.":"Não foi possível criar a conta: "+error.message;return}
-    if(!data.session){$("#cadErr").textContent="Enviamos um e-mail de confirmação. Toque no link do e-mail e depois entre com sua senha.";return}
-    S.uid=data.user.id;$("#cadErr").textContent="";
-  }
+  const antes=S.conta||{},now=new Date().toISOString();
+  if(sb&&nova&&!completar){ // online: o usuário só existe depois de confirmar o código
+    $("#cadErr").textContent="Enviando código…";
+    try{await pedirCodigoSupa(whats,true)}catch(x){$("#cadErr").textContent=x.message||"Sem conexão com o servidor. Tente de novo.";return}
+    $("#cadErr").textContent="";S.fluxo={tipo:"cadastro",whats,nome,lgpdEm:now,tentativas:0};$("#cd-code").value="";$("#codeErr").textContent="";
+    track("cadastro_enviado");toast("Código enviado para o WhatsApp");gate();return}
   if(nova&&!sb){S.uid="u"+Date.now();S.conta=null;S.mine=[];S.gar=garPadrao()}
-  const antes=S.conta||{},now=new Date().toISOString(),precisaConfirmar=antes.whats!==whats||antes.status!=="confirmado";
-  const c={...antes,nome,cpf,email,whats,lgpdEm:antes.lgpdEm||now,atualizadoEm:now,criadoEm:antes.criadoEm||now};
-  if(nova&&!sb)c.senha=novaSenha($("#cd-senha").value);
+  // online o número já foi confirmado pelo Supabase Auth; local/rede, só se não mudou
+  const confirmadoAuth=!!sb,precisaConfirmar=!confirmadoAuth&&(antes.whats!==whats||antes.status!=="confirmado");
+  const c={...antes,nome,whats,lgpdEm:antes.lgpdEm||now,atualizadoEm:now,criadoEm:antes.criadoEm||now};
+  delete c.cpf;delete c.email;delete c.senha;delete c.erros;delete c.bloqueadoAte; // restos do cadastro antigo
+  if(confirmadoAuth&&c.status!=="confirmado"){c.status="confirmado";c.confirmadoEm=now}
   if(precisaConfirmar){c.status="pendente";c.codigo=novoCodigo();c.tentativas=0;c.codigoEm=now;delete c.confirmadoEm}
-  try{await saveConta(c);if(nova&&!sb)lsSet(LS_SESSAO,S.uid);if(nova)track("cadastro_enviado");
-    S.editando=false;$("#cd-code").value="";$("#codeErr").textContent="";$("#cd-senha").value=$("#cd-senha2").value="";
-    if(precisaConfirmar){toast("Código enviado para o WhatsApp");gate()}else{toast("Dados atualizados");show("conta");renderGaragem()}}
+  try{await saveConta(c);if(nova&&!sb)lsSet(LS_SESSAO,S.uid);if(nova&&!completar)track("cadastro_enviado");
+    S.editando=false;$("#cd-whats").readOnly=false;$("#cd-code").value="";$("#codeErr").textContent="";
+    if(precisaConfirmar){toast("Código enviado para o WhatsApp");gate()}
+    else if(completar){await Promise.all([carregarRede(),carregarMeus()]);S.isOwner=!!(S.conta&&S.conta.isAdmin);renderAll();track("conta_confirmada");toast(`Conta criada. Bem-vindo, ${primeiroNome()}!`);gate()}
+    else{toast("Dados atualizados");show("conta");renderGaragem()}}
   catch(err){$("#cadErr").textContent="Não foi possível salvar: "+(err.message||err.code)}
 };
+async function confirmarFluxoSupa(f,code){
+  const {data,error}=await sb.auth.verifyOtp({phone:telDoWhats(f.whats),token:code,type:"sms"});
+  if(error){
+    if(/expired|invalid|token/i.test(error.message)){f.tentativas++;
+      $("#codeErr").textContent=f.tentativas>=5?"Muitas tentativas. Toque em “Reenviar código”.":/expired/i.test(error.message)?"Código vencido. Toque em “Reenviar código”.":`Código incorreto. Restam ${5-f.tentativas} tentativas.`}
+    else $("#codeErr").textContent="Não foi possível confirmar: "+error.message;
+    return}
+  const uid=data.user.id;S.fluxo=null;S.sessWhats=f.whats;$("#codeErr").textContent="";$("#cd-code").value="";
+  if(f.tipo==="cadastro"){S.uid=uid;S.conta=null;const now=new Date().toISOString();
+    await saveConta({nome:f.nome,whats:f.whats,status:"confirmado",lgpdEm:f.lgpdEm,criadoEm:now,atualizadoEm:now,confirmadoEm:now});
+    await Promise.all([carregarRede(),carregarMeus()]);renderAll();track("conta_confirmada");toast(`Conta criada. Bem-vindo, ${primeiroNome()}!`);gate();return}
+  await entrarSupa(uid);renderAll();track("login");toast(S.conta?`Bem-vindo de volta, ${primeiroNome()}!`:"Número confirmado. Complete seu cadastro.");gate();
+}
 $("#cadCode").onsubmit=async e=>{
   e.preventDefault();const code=$("#cd-code").value,f=S.fluxo;
   if(code.length!==6){$("#codeErr").textContent="Digite os 6 dígitos.";return}
+  if(f&&sb){
+    if(f.tentativas>=5){$("#codeErr").textContent="Muitas tentativas. Toque em “Reenviar código”.";return}
+    $("#codeErr").textContent="Confirmando…";
+    try{await confirmarFluxoSupa(f,code)}catch(x){$("#codeErr").textContent="Sem conexão com o servidor. Tente de novo."}
+    return}
   if(f){
     if(code!==f.codigo){
       f.tentativas++;
       if(f.tentativas>=5){f.codigo=novoCodigo();f.tentativas=0;$("#codeErr").textContent="Muitas tentativas. Enviamos um novo código."}
       else $("#codeErr").textContent=`Código incorreto. Restam ${5-f.tentativas} tentativas.`;
-      if(sb)lsSet(LS_2FA,f);gate();return}
+      gate();return}
     $("#codeErr").textContent="";$("#cd-code").value="";
-    if(f.tipo==="login"){
-      S.fluxo=null;lsSet(LS_2FA,null);
-      if(sb){try{await entrarSupa(f.uid)}catch(x){toast("Sem conexão com o servidor");return}}else entrarLocal(f.uid);
-      renderAll();track("login");toast(`Bem-vindo de volta, ${primeiroNome()}!`);gate()}
-    else{f.etapa="senha";gate();$("#ns-senha").focus()}
+    S.fluxo=null;entrarLocal(f.uid);renderAll();track("login");toast(`Bem-vindo de volta, ${primeiroNome()}!`);gate();
     return}
   const c={...S.conta};
   if(code!==c.codigo){
@@ -1848,29 +1788,19 @@ $("#cadCode").onsubmit=async e=>{
   const orf=S.mode==="local"?lsGet(LS_ORFAO,null):null;
   if(orf){S.mine=orf.mine||[];if(orf.gar)S.gar=orf.gar;if(orf.pub)S.pub={...S.pub,[S.uid]:orf.pub};lsSet(LS_ORFAO,null)}
   try{await saveConta(c);
-    if(sb){await Promise.all([carregarRede(),carregarMeus()]);S.isOwner=!!S.conta.isAdmin}
     $("#codeErr").textContent="";$("#cd-code").value="";renderAll();track("conta_confirmada");
     toast(orf?"Conta confirmada. Seus veículos e abastecimentos anteriores agora estão nesta conta.":`Conta confirmada. Bem-vindo, ${primeiroNome()}!`);gate()}
   catch(err){$("#codeErr").textContent="Não foi possível confirmar: "+(err.message||err.code)}
 };
 $("#codeResend").onclick=async()=>{
-  if(S.fluxo){S.fluxo.codigo=novoCodigo();S.fluxo.tentativas=0;if(sb)lsSet(LS_2FA,S.fluxo);$("#codeErr").textContent="";toast("Novo código enviado");gate();return}
+  const f=S.fluxo;
+  if(f&&sb){try{await pedirCodigoSupa(f.whats,f.tipo==="cadastro");f.tentativas=0;$("#codeErr").textContent="";toast("Novo código enviado")}catch(x){$("#codeErr").textContent=x.message||"Não foi possível reenviar"}return}
+  if(f){f.codigo=novoCodigo();f.tentativas=0;$("#codeErr").textContent="";toast("Novo código enviado");gate();return}
   const c={...S.conta,codigo:novoCodigo(),tentativas:0,codigoEm:new Date().toISOString()};try{await saveConta(c);$("#codeErr").textContent="";toast("Novo código enviado");gate()}catch(err){toast("Não foi possível reenviar")}};
-$("#codeFix").onclick=()=>editarConta(false);
-$("#cadCancel").onclick=()=>{S.editando=false;$("#cd-email").readOnly=false;if(contaConfirmada()){show("conta")}else gate()};
+$("#codeFix").onclick=()=>{if(S.fluxo&&S.fluxo.tipo==="cadastro"){const f=S.fluxo;irPara("cadastro");fillCadForm({nome:f.nome,whats:f.whats,lgpdEm:f.lgpdEm})}else editarConta(false)};
+$("#cadCancel").onclick=()=>{S.editando=false;$("#cd-whats").readOnly=false;$("#cdWhatsNota").textContent=NOTA_WHATS;if(contaConfirmada()){show("conta")}else gate()};
 $("#contaBtn").onclick=()=>show("conta");
 $("#usoAtual").onclick=()=>carregarAdmin();
-$("#trocaSenha").onsubmit=async e=>{
-  e.preventDefault();const c=S.conta,a=$("#ts-nova").value,atual=$("#ts-atual").value;let erro=senhaErro(a,$("#ts-nova2").value);
-  if(sb){
-    if(!erro){const r=await sb.auth.signInWithPassword({email:c.email,password:atual});if(r.error)erro="Senha atual incorreta."}
-    if(!erro){const {error}=await sb.auth.updateUser({password:a});if(error)erro=/same|different/i.test(error.message)?"A nova senha precisa ser diferente da atual.":"Não foi possível salvar: "+error.message}
-    $("#tsErr").textContent=erro;if(erro)return;
-    $("#trocaSenha").reset();toast("Senha alterada");track("senha_alterada");return}
-  if(!erro&&c.senha&&!senhaConfere(c,atual))erro="Senha atual incorreta.";
-  $("#tsErr").textContent=erro;if(erro)return;
-  S.conta={...c,senha:novaSenha(a)};lsSave();$("#trocaSenha").reset();toast(c.senha?"Senha alterada":"Senha criada");renderConta();
-};
 $("#sairBtn").onclick=async e=>{const b=e.currentTarget;
   if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Confirmar: sair da conta";b.classList.remove("ghost");return}
   delete b.dataset.confirm;b.textContent="Sair da conta";b.classList.add("ghost");
@@ -1879,19 +1809,18 @@ function renderConta(){
   const c=S.conta;if(!c){$("#contaCard").hidden=true;return}
   $("#contaCard").hidden=false;
   $("#contaCard").innerHTML=`<div class="row between"><h3>Minha conta</h3><span class="pill ${c.status==="confirmado"?"ok":"wait"}">${c.status==="confirmado"?"WhatsApp confirmado":"Aguardando confirmação"}</span></div>
-    <dl class="kv"><dt>Nome</dt><dd>${esc(c.nome)}</dd><dt>CPF</dt><dd>${mascCpf(c.cpf)}</dd><dt>E-mail</dt><dd>${esc(c.email)}</dd><dt>WhatsApp</dt><dd>${esc(fmtWhats(c.whats))}</dd></dl>
-    <div><button class="btn ghost small" id="contaEdit">Alterar dados</button></div><p class="note">Se trocar o WhatsApp, será preciso confirmar o novo número.</p>`;
+    <dl class="kv"><dt>Nome</dt><dd>${esc(c.nome)}</dd><dt>WhatsApp</dt><dd>${esc(fmtWhats(c.whats))}</dd></dl>
+    <div><button class="btn ghost small" id="contaEdit">Alterar dados</button></div><p class="note">${sb?"O WhatsApp é o seu login: cada acesso é confirmado por um código enviado a ele.":"Se trocar o WhatsApp, será preciso confirmar o novo número."}</p>`;
   $("#contaEdit").onclick=()=>editarConta(true);
   const nAval=(S.pub[S.uid]||[]).filter(i=>i.estrelas).length;
   $("#contaKpis").innerHTML=`<div class="metric"><div class="k">Veículos</div><div class="v">${(S.gar.veiculos||[]).length}</div></div><div class="metric"><div class="k">Abastecimentos</div><div class="v">${S.mine.length}</div></div><div class="metric"><div class="k">Avaliações</div><div class="v">${nAval}</div></div>`;
-  $("#sairCard").hidden=$("#trocaSenha").hidden=!comLogin();
-  const temSenha=!!(sb||c.senha);$("#tsAtualL").hidden=!temSenha;$("#tsTit").textContent=$("#tsBtn").textContent=temSenha?"Alterar senha":"Criar senha";
+  $("#sairCard").hidden=!comLogin();
   if(S.isOwner&&sb&&S.tela==="conta")renderUso();
 }
 function renderAdmin(){
   $("#adminCard").hidden=!S.isOwner;if(!S.isOwner)return;
   const u=S.usuarios.slice().sort((a,b)=>(b.criadoEm||"").localeCompare(a.criadoEm||""));
-  $("#userRows").innerHTML=u.length?u.map(x=>`<tr><td>${esc(x.nome)}</td><td>${esc(fmtCpf(x.cpf))}</td><td>${esc(x.email)}</td><td>${esc(fmtWhats(x.whats))}</td><td><span class="pill ${x.status==="confirmado"?"ok":"wait"}">${x.status==="confirmado"?"Confirmado":"Pendente"}</span></td><td>${fdata(x.criadoEm)}</td></tr>`).join(""):'<tr><td colspan="6" class="note">Nenhum usuário cadastrado ainda.</td></tr>';
+  $("#userRows").innerHTML=u.length?u.map(x=>`<tr><td>${esc(x.nome)}</td><td>${esc(fmtWhats(x.whats))}</td><td><span class="pill ${x.status==="confirmado"?"ok":"wait"}">${x.status==="confirmado"?"Confirmado":"Pendente"}</span></td><td>${fdata(x.criadoEm)}</td></tr>`).join(""):'<tr><td colspan="4" class="note">Nenhum usuário cadastrado ainda.</td></tr>';
 }
 
 init();

@@ -42,25 +42,13 @@ describe("avaliação no abastecimento seguinte", () => {
   });
 });
 
-describe("cadastro e login", () => {
-  it("CPF pelos dígitos verificadores", () => {
-    expect(R.cpfValido("529.982.247-25")).toBe(true);
-    expect(R.cpfValido("52998224725")).toBe(true);
-    expect(R.cpfValido("529.982.247-24")).toBe(false);
-    expect(R.cpfValido("111.111.111-11")).toBe(false);
-    expect(R.cpfValido("123")).toBe(false);
-  });
+describe("conta pelo celular", () => {
   it("WhatsApp = DDD + celular: 11 dígitos, com o 9 depois do DDD", () => {
     expect(R.whatsValido("(11) 98765-4321")).toBe(true);
+    expect(R.whatsValido("11987654321")).toBe(true);
     expect(R.whatsValido("(11) 3876-5432")).toBe(false);
     expect(R.whatsValido("11 88765-4321")).toBe(false);
-  });
-  it("senha com pelo menos 8 caracteres, letras e números, e a confirmação igual", () => {
-    expect(R.senhaErro("abc12345", "abc12345")).toBe("");
-    expect(R.senhaErro("abc1234", "abc1234")).toMatch(/8 caracteres/);
-    expect(R.senhaErro("abcdefgh", "abcdefgh")).toMatch(/letras e números/);
-    expect(R.senhaErro("12345678", "12345678")).toMatch(/letras e números/);
-    expect(R.senhaErro("abc12345", "abc12346")).toBe("As senhas não conferem.");
+    expect(R.whatsValido("")).toBe(false);
   });
 });
 
